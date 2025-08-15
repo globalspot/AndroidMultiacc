@@ -623,6 +623,19 @@
                                                     </span>
                                                 </div>
                                             </div>
+                                           <!-- Create Date -->
+                                           <div class="mb-3">
+                                               <div class="text-xs text-gray-500">
+                                                   {{ __('app.create_date') }}:
+                                                   <span class="font-medium">
+                                                       @if(!empty($device->createDate))
+                                                           {{ \Carbon\Carbon::createFromTimestamp($device->createDate)->format('Y-m-d H:i') }}
+                                                       @else
+                                                           -
+                                                       @endif
+                                                   </span>
+                                               </div>
+                                           </div>
 
                                             <!-- Group Limit Info (if device is in a group) -->
                                             @if(isset($device->group) && $device->group)
@@ -722,6 +735,9 @@
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 {{ __('app.status') }}
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                {{ __('app.create_date') }}
                                             </th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 {{ __('app.actions') }}
@@ -831,6 +847,14 @@
                                                     {{ __('app.' . ($device->deviceStatus ?? 'offline')) }}
                                                 </span>
                                             </td>
+                                            <!-- Create Date -->
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                                @if(!empty($device->createDate))
+                                                    {{ \Carbon\Carbon::createFromTimestamp($device->createDate)->format('Y-m-d H:i') }}
+                                               @else
+                                                   -
+                                               @endif
+                                           </td>
                                             
                                             <!-- Actions -->
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">

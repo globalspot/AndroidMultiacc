@@ -138,6 +138,20 @@ return [
     'reports' => 'Отчеты',
     'users' => 'Пользователи',
     'system' => 'Система',
+    // Sidebar sections/links
+    'primary' => 'Основное',
+    'discover' => 'Обзор',
+    'applications' => 'Приложения',
+    'library' => 'Библиотека',
+    'automation' => 'Автоматизация',
+    'synchronizer' => 'Синхронизатор',
+    'api' => 'API',
+    'referral' => 'Рефералы',
+    'team' => 'Команда',
+    'billing' => 'Биллинг',
+    'logs' => 'Логи',
+    'user_administration' => 'Управление пользователями',
+    'assign_manager_to_users' => 'Назначение менеджера пользователям',
 
     // Footer
     'all_rights_reserved' => 'Все права защищены.',
@@ -270,11 +284,13 @@ return [
     'actions' => 'Действия',
     'os' => 'ОС',
     'platform' => 'Платформа',
+    'create_date' => 'Дата создания',
     'view_device' => 'Просмотр',
     
     // User Group Assignments
     'user_group_assignments' => 'Назначения пользователей в группы',
     'device_assignment_management' => 'Управление назначением устройств',
+    'device_assignment' => 'Назначение устройств',
     'device_assignment_description' => 'Назначайте устройства пользователям в группах, которыми вы управляете. Вы можете назначать только устройства из gate URL, назначенных вашим группам.',
     'assign_device_to_user' => 'Назначить устройство пользователю',
     'device' => 'Устройство',
