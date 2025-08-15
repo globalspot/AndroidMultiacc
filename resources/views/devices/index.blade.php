@@ -473,8 +473,9 @@
                         </div>
                 <div class="p-6">
                     @if($devices->count() > 0)
-                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8" id="deviceGrid">
-                            @foreach($devices as $device)
+                        @php $initialDevices = $devices->slice(0, 20); @endphp
+                         <div class="grid grid-cols-1 xl:grid-cols-2 gap-8" id="deviceGrid">
+                            @foreach($initialDevices as $device)
                                 <div class="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow device-card" 
                                      data-device-id="{{ $device->id }}" 
                                      data-device-status="{{ $device->deviceStatus }}"
@@ -744,8 +745,8 @@
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        @foreach($devices as $device)
+                                    <tbody class="bg-white divide-y divide-gray-200" id="deviceTableBody">
+                                        @foreach($initialDevices as $device)
                                         <tr class="hover:bg-gray-50 device-table-row" 
                                             data-device-id="{{ $device->id }}" 
                                             data-device-status="{{ $device->deviceStatus }}"
@@ -900,6 +901,19 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
+                        
+                        <div id="infiniteLoader" class="mt-6 text-center text-sm text-gray-500 hidden">
+
+                            <svg width="40" height="40" viewBox="0 0 40 40" class="mx-auto h-5 w-5 animate-spin text-gray-400 inline">
+                                <circle fill="none" stroke-opacity="1" stroke="#5E0EFF" stroke-width="0.5" cx="20" cy="20" r="0">
+                                    <animate attributeName="r" calcMode="spline" dur="2" values="1;16" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
+                                    <animate attributeName="stroke-width" calcMode="spline" dur="2" values="0;3" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
+                                    <animate attributeName="stroke-opacity" calcMode="spline" dur="2" values="1;0" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
+                                </circle>
+                            </svg>
+
+                            <span class="ml-2">{{ __('app.loading') }}</span>
                         </div>
                         
                         <!-- No Results Message -->
@@ -2025,6 +2039,74 @@
                        deviceGroup.includes(searchTerm) ||
                        devicePort.includes(searchTerm);
             }
+
+            // Infinite scroll loader
+            let chunkOffset = 20;
+            const chunkLimit = 20;
+            let isLoadingChunk = false;
+            let hasMoreChunks = {{ $devices->count() > 20 ? 'true' : 'false' }};
+
+            const infiniteLoader = document.getElementById('infiniteLoader');
+
+            async function loadNextChunk() {
+                if (isLoadingChunk || !hasMoreChunks) return;
+                isLoadingChunk = true;
+                if (infiniteLoader) infiniteLoader.classList.remove('hidden');
+
+                const params = new URLSearchParams();
+                params.set('offset', String(chunkOffset));
+                params.set('limit', String(chunkLimit));
+                params.set('view', currentView);
+                const groupId = '{{ request('group_id') }}';
+                const userId = '{{ request('user_id') }}';
+                if (groupId) params.set('group_id', groupId);
+                if (userId) params.set('user_id', userId);
+
+                try {
+                    const res = await fetch(`/devices/chunk?${params.toString()}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        if (currentView === 'cards') {
+                            const grid = document.getElementById('deviceGrid');
+                            if (grid && data.html) {
+                                const temp = document.createElement('div');
+                                temp.innerHTML = data.html;
+                                Array.from(temp.children).forEach(child => grid.appendChild(child));
+                            }
+                        } else {
+                            const body = document.getElementById('deviceTableBody');
+                            if (body && data.html) {
+                                const temp = document.createElement('tbody');
+                                temp.innerHTML = data.html;
+                                Array.from(temp.children).forEach(child => body.appendChild(child));
+                            }
+                        }
+                        chunkOffset = data.nextOffset;
+                        hasMoreChunks = !!data.hasMore;
+                    }
+                } catch (e) {
+                    console.error('Failed to load next chunk', e);
+                } finally {
+                    if (infiniteLoader) infiniteLoader.classList.add('hidden');
+                    isLoadingChunk = false;
+                }
+            }
+
+            function onScrollLoadMore() {
+                const scrollY = window.scrollY || window.pageYOffset;
+                const viewport = window.innerHeight || document.documentElement.clientHeight;
+                const full = document.documentElement.scrollHeight;
+                // Start loading when user is within 600px of bottom
+                if (full - (scrollY + viewport) < 600) {
+                    loadNextChunk();
+                }
+            }
+
+            window.addEventListener('scroll', onScrollLoadMore);
+            // Also trigger once after initial render
+            setTimeout(onScrollLoadMore, 500);
         });
 
         // Also try initializing immediately if DOM is already loaded

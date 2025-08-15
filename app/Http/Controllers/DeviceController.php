@@ -9,6 +9,7 @@ use App\Services\DeviceService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 
 class DeviceController extends Controller
 {
@@ -548,6 +549,78 @@ class DeviceController extends Controller
                 'message' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Load devices chunk for infinite scrolling
+     */
+    public function chunk(Request $request)
+    {
+        $user = $request->user();
+        $offset = max(0, (int) $request->query('offset', 0));
+        $limit = max(1, min(100, (int) $request->query('limit', 20)));
+        $view = $request->query('view', 'cards'); // 'cards' or 'table'
+
+        $selectedGroupId = $request->query('group_id');
+        $selectedUserId = $request->query('user_id');
+
+        $withDebug = (bool) $request->query('debug', false);
+        if ($withDebug) {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            DB::connection('mysql_second')->flushQueryLog();
+            DB::connection('mysql_second')->enableQueryLog();
+        }
+
+        // Base accessible devices list (already sorted in service)
+        $devices = $this->deviceService->getAccessibleDevicesForUser($user, $selectedGroupId, $selectedUserId);
+
+        $total = $devices->count();
+        $chunk = $devices->slice($offset, $limit)->values();
+        $hasMore = ($offset + $limit) < $total;
+
+        if ($view === 'table') {
+            $html = view('devices.partials.table-rows', [
+                'devices' => $chunk,
+                'user' => $user,
+            ])->render();
+        } else {
+            $html = view('devices.partials.card-list', [
+                'devices' => $chunk,
+                'user' => $user,
+            ])->render();
+        }
+
+        $response = [
+            'success' => true,
+            'html' => $html,
+            'hasMore' => $hasMore,
+            'nextOffset' => $offset + $limit,
+            'total' => $total,
+        ];
+
+        if ($withDebug) {
+            $format = function ($query, $bindings) {
+                foreach ($bindings as $binding) {
+                    $binding = is_numeric($binding) ? $binding : (is_null($binding) ? 'NULL' : ("'" . str_replace("'", "''", (string) $binding) . "'"));
+                    $query = preg_replace('/\?/', (string) $binding, $query, 1);
+                }
+                return $query;
+            };
+
+            $primaryLogs = collect(DB::getQueryLog() ?? [])->map(function ($q) use ($format) {
+                return $format($q['query'] ?? '', $q['bindings'] ?? []);
+            });
+            $secondaryLogs = collect(DB::connection('mysql_second')->getQueryLog() ?? [])->map(function ($q) use ($format) {
+                return $format($q['query'] ?? '', $q['bindings'] ?? []);
+            });
+            $response['queries'] = [
+                'primary' => $primaryLogs->values(),
+                'mysql_second' => $secondaryLogs->values(),
+            ];
+        }
+
+        return response()->json($response);
     }
 
     /**

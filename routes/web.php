@@ -29,6 +29,7 @@ Route::middleware('auth')->group(function () {
     
     // Device management routes
     Route::get('/devices', [App\Http\Controllers\DeviceController::class, 'index'])->name('devices.index');
+    Route::get('/devices/chunk', [App\Http\Controllers\DeviceController::class, 'chunk'])->name('devices.chunk');
 
     Route::post('/devices/assign', [App\Http\Controllers\DeviceController::class, 'assign'])->name('devices.assign');
     Route::delete('/devices/{deviceId}/unassign/{userId}', [App\Http\Controllers\DeviceController::class, 'unassign'])->name('devices.unassign');
