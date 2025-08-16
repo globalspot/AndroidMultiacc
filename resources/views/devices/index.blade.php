@@ -905,15 +905,14 @@
                         
                         <div id="infiniteLoader" class="mt-6 text-center text-sm text-gray-500 hidden">
 
-                            <svg width="40" height="40" viewBox="0 0 40 40" class="mx-auto h-5 w-5 animate-spin text-gray-400 inline">
-                                <circle fill="none" stroke-opacity="1" stroke="#5E0EFF" stroke-width="0.5" cx="20" cy="20" r="0">
-                                    <animate attributeName="r" calcMode="spline" dur="2" values="1;16" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
-                                    <animate attributeName="stroke-width" calcMode="spline" dur="2" values="0;3" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
+                            <svg width="100" height="100" viewBox="0 0 100 100" class="mx-auto h-25 w-25 animate-spin text-gray-400 inline">
+                                <circle fill="none" stroke-opacity="1" stroke="#5E0EFF" stroke-width="1.25" cx="50" cy="50" r="0">
+                                    <animate attributeName="r" calcMode="spline" dur="2" values="2.5;40" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
+                                    <animate attributeName="stroke-width" calcMode="spline" dur="2" values="0;7.5" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
                                     <animate attributeName="stroke-opacity" calcMode="spline" dur="2" values="1;0" keyTimes="0;1" keySplines="0 .2 .5 1" repeatCount="indefinite"></animate>
                                 </circle>
                             </svg>
 
-                            <span class="ml-2">{{ __('app.loading') }}</span>
                         </div>
                         
                         <!-- No Results Message -->
