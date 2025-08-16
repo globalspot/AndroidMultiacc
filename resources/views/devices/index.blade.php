@@ -2003,6 +2003,8 @@
             const devicesOrderToken = @json($devicesOrderToken ?? null);
 
             const infiniteLoader = document.getElementById('infiniteLoader');
+            const searchInputEl = document.getElementById('search');
+            const onlyOnlineEl = document.getElementById('onlyOnlineToggle');
 
             async function loadNextChunk() {
                 if (isLoadingChunk || !hasMoreChunks) return;
@@ -2018,6 +2020,9 @@
                 const userId = '{{ request('user_id') }}';
                 if (groupId) params.set('group_id', groupId);
                 if (userId) params.set('user_id', userId);
+                const searchVal = (searchInputEl?.value || '').trim();
+                if (searchVal) params.set('search', searchVal);
+                if (onlyOnlineEl?.checked) params.set('only_online', '1');
 
                 try {
                     const res = await fetch(`/devices/chunk?${params.toString()}`, {
@@ -2025,6 +2030,11 @@
                     });
                     const data = await res.json();
                     if (data.success) {
+                        // If no HTML returned, stop further loading
+                        if (!data.html || data.html.trim() === '') {
+                            hasMoreChunks = false;
+                            return;
+                        }
                         if (currentView === 'cards') {
                             const grid = document.getElementById('deviceGrid');
                             if (grid && data.html) {
@@ -2042,6 +2052,10 @@
                         }
                         chunkOffset = data.nextOffset;
                         hasMoreChunks = !!data.hasMore;
+                        // Re-apply client-side filter to newly appended items
+                        if (typeof performSearch === 'function') {
+                            performSearch();
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to load next chunk', e);
@@ -2062,8 +2076,61 @@
             }
 
             window.addEventListener('scroll', onScrollLoadMore);
+            // Reset chunk loading state when filters change
+            function resetChunkState() {
+                chunkOffset = 20;
+                hasMoreChunks = true;
+                // Optionally remove previously appended items beyond first 20
+                const grid = document.getElementById('deviceGrid');
+                const body = document.getElementById('deviceTableBody');
+                if (grid && currentView === 'cards') {
+                    // Keep first 20 cards
+                    const cards = grid.querySelectorAll('.device-card');
+                    for (let i = 20; i < cards.length; i++) cards[i].remove();
+                } else if (body && currentView === 'table') {
+                    const rows = body.querySelectorAll('.device-table-row');
+                    for (let i = 20; i < rows.length; i++) rows[i].remove();
+                }
+                // Immediately try loading a chunk for new filters
+                loadNextChunk();
+            }
+            if (searchInputEl) searchInputEl.addEventListener('input', () => { resetChunkState(); });
+            if (onlyOnlineEl) onlyOnlineEl.addEventListener('change', () => { resetChunkState(); });
             // Also trigger once after initial render
             setTimeout(onScrollLoadMore, 500);
+
+            // Helper to detect if there are any currently visible results
+            function hasAnyVisibleResult() {
+                if (currentView === 'cards') {
+                    const cards = document.querySelectorAll('.device-card');
+                    for (const c of cards) { if (c.style.display !== 'none') return true; }
+                    return false;
+                } else {
+                    const rows = document.querySelectorAll('.device-table-row');
+                    for (const r of rows) { if (r.style.display !== 'none') return true; }
+                    return false;
+                }
+            }
+
+            // If after search there are no visible results, auto-fetch a few more chunks
+            if (typeof performSearch === 'function') {
+                const originalPerformSearch = performSearch;
+                window.performSearch = function() {
+                    originalPerformSearch();
+                    const hasFilter = ((searchInputEl?.value || '').trim() !== '') || (onlyOnlineEl?.checked === true);
+                    // Auto-fetch more only when there are active filters and no visible results
+                    if (hasFilter && !hasAnyVisibleResult()) {
+                        (async () => {
+                            let attempts = 0;
+                            // Try up to 5 chunks to find matches under current filters
+                            while (!hasAnyVisibleResult() && hasMoreChunks && attempts < 5) {
+                                await loadNextChunk();
+                                attempts++;
+                            }
+                        })();
+                    }
+                };
+            }
         });
 
         // Also try initializing immediately if DOM is already loaded

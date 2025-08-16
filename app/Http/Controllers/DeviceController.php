@@ -580,19 +580,75 @@ class DeviceController extends Controller
         if ($orderToken) {
             $orderedIds = (array) session("devices_order.$orderToken", []);
             $total = count($orderedIds);
-            if ($total > 0) {
+
+            // Read filters
+            $search = mb_strtolower(trim((string) $request->query('search', '')));
+            $onlyOnline = (string) $request->query('only_online', '') === '1';
+            $isFiltered = ($search !== '' || $onlyOnline);
+
+            if (!$isFiltered) {
+                // Fast path: no filters → simple slice, contiguous paging
                 $sliceIds = array_slice($orderedIds, $offset, $limit);
                 if (!empty($sliceIds)) {
                     $chunk = $this->deviceService->getDevicesByIdsForUser($user, $sliceIds);
                 }
+                $hasMore = ($offset + $limit) < $total;
+                $nextOffset = $offset + $limit;
+            } else {
+                // Filtered path: scan windows forward to collect matching items
+                $windowSize = max($limit * 10, 200); // evaluate up to 200 IDs per request
+                $scanIndex = $offset;
+                $matches = collect();
+
+                while ($scanIndex < $total && $matches->count() < $limit) {
+                    $end = min($scanIndex + $windowSize, $total);
+                    $windowIds = array_slice($orderedIds, $scanIndex, $end - $scanIndex);
+                    if (empty($windowIds)) break;
+
+                    $devicesWindow = $this->deviceService->getDevicesByIdsForUser($user, $windowIds);
+
+                    // Filter by online status and search
+                    $filtered = $devicesWindow->filter(function ($d) use ($onlyOnline, $search) {
+                        if ($onlyOnline && (($d->deviceStatus ?? '') !== 'online')) return false;
+                        if ($search === '') return true;
+                        $haystacks = [
+                            mb_strtolower((string)($d->display_name ?? '')),
+                            mb_strtolower((string)($d->deviceName ?? '')),
+                            mb_strtolower((string)($d->devicePlatform ?? '')),
+                            mb_strtolower((string)($d->deviceOs ?? '')),
+                            mb_strtolower((string)($d->deviceStatus ?? '')),
+                            mb_strtolower((string)optional($d->group)->name ?? ''),
+                            (string)($d->port_number ?? ''),
+                        ];
+                        foreach ($haystacks as $h) {
+                            if ($h !== '' && str_contains($h, $search)) return true;
+                        }
+                        return false;
+                    })->values();
+
+                    $needed = $limit - $matches->count();
+                    if ($filtered->isNotEmpty()) {
+                        $matches = $matches->merge($filtered->slice(0, $needed));
+                    }
+
+                    $scanIndex = $end;
+                }
+
+                $chunk = $matches->values();
+                $hasMore = $scanIndex < $total;
+                $nextOffset = $scanIndex; // advance to where we scanned up to
             }
         } else {
             // Fallback: full list slice
             $devices = $this->deviceService->getAccessibleDevicesForUser($user, $selectedGroupId, $selectedUserId);
             $total = $devices->count();
             $chunk = $devices->slice($offset, $limit)->values();
+            $hasMore = ($offset + $limit) < $total;
+            $nextOffset = $offset + $limit;
         }
-        $hasMore = ($offset + $limit) < $total;
+        if (!isset($hasMore)) {
+            $hasMore = ($offset + $limit) < $total;
+        }
 
         if ($view === 'table') {
             $html = view('devices.partials.table-rows', [
@@ -610,7 +666,7 @@ class DeviceController extends Controller
             'success' => true,
             'html' => $html,
             'hasMore' => $hasMore,
-            'nextOffset' => $offset + $limit,
+            'nextOffset' => $nextOffset ?? ($offset + $limit),
             'total' => $total,
         ];
 
