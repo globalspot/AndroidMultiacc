@@ -216,6 +216,7 @@ return [
     'stop' => 'Stop',
     'device_started_successfully' => 'Device started successfully',
     'device_start_failed' => 'Failed to start device',
+    'start_failed' => 'Start failed',
     'device_stopped_successfully' => 'Device stopped successfully',
     'device_stop_failed' => 'Failed to stop device',
     'device_cannot_be_started' => 'Device cannot be started (not in stopped status)',
@@ -226,6 +227,7 @@ return [
     'stopped' => 'Stopped',
     'online' => 'Online',
     'running' => 'Running',
+    'failed' => 'Failed',
 
     // Screenshots
     'device_screenshot' => 'Device Screenshot',
@@ -277,6 +279,7 @@ return [
     'screenshot_requested' => 'Screenshot requested',
     'show_only_online' => 'Show only online',
     'refresh_devices_failed' => 'Failed to refresh devices',
+    'chunk_preload_failed' => 'Failed to load more devices',
     'refresh_screenshots_failed' => 'Failed to refresh screenshots',
     'try_different_search' => 'Try adjusting your search terms',
     'port' => 'Port',

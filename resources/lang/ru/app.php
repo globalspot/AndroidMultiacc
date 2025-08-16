@@ -216,6 +216,7 @@ return [
     'stop' => 'Стоп',
     'device_started_successfully' => 'Устройство успешно запущено',
     'device_start_failed' => 'Ошибка запуска устройства',
+    'start_failed' => 'Ошибка запуска',
     'device_stopped_successfully' => 'Устройство успешно остановлено',
     'device_stop_failed' => 'Ошибка остановки устройства',
     'device_cannot_be_started' => 'Устройство нельзя запустить (не в статусе остановлено)',
@@ -226,6 +227,7 @@ return [
     'stopped' => 'Остановлено',
     'online' => 'В сети',
     'running' => 'Работает',
+    'failed' => 'Сбой',
 
     // Screenshots
     'device_screenshot' => 'Скриншот устройства',
@@ -277,6 +279,7 @@ return [
     'screenshot_requested' => 'Скриншот запрошен',
     'show_only_online' => 'Показывать только онлайн',
     'refresh_devices_failed' => 'Не удалось обновить устройства',
+    'chunk_preload_failed' => 'Не удалось загрузить дополнительные устройства',
     'refresh_screenshots_failed' => 'Не удалось обновить скриншоты',
     'try_different_search' => 'Попробуйте изменить условия поиска',
     'port' => 'Порт',

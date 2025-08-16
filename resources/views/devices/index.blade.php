@@ -1306,6 +1306,7 @@
                 'starting': '{{ __('app.starting') }}',
                 'stopped': '{{ __('app.stopped') }}',
                 'running': '{{ __('app.running') }}',
+                'failed': '{{ __('app.failed') }}',
                 'unknown': '{{ __('app.unknown') }}'
             };
             const translated = translations[status] || status;
@@ -2129,6 +2130,7 @@
                     }
                 } catch (e) {
                     // Failed to load next chunk
+                    try { showNotification('{{ __('app.chunk_preload_failed') }}', 'error'); } catch (_) {}
                 } finally {
                     if (infiniteLoader) infiniteLoader.classList.add('hidden');
                     isLoadingChunk = false;
