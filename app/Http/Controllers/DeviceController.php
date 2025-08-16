@@ -393,7 +393,7 @@ class DeviceController extends Controller
                 'timestamp' => now()->timestamp
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to refresh devices'], 500);
+            return response()->json(['error' => __('app.refresh_devices_failed')], 500);
         }
     }
 
@@ -424,7 +424,7 @@ class DeviceController extends Controller
                 'timestamp' => now()->timestamp
             ]);
         } catch (\Exception $e) {
-            return response()->json(['error' => 'Failed to refresh screenshots'], 500);
+            return response()->json(['error' => __('app.refresh_screenshots_failed')], 500);
         }
     }
 

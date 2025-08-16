@@ -200,7 +200,7 @@ return [
     'device_details' => 'Детали устройства',
     'device_actions' => 'Действия с устройством',
     'manage_device' => 'Управление устройством',
-    'view_device' => 'Просмотр устройства',
+    'view_device' => 'Просмотр',
     'edit_device' => 'Редактирование устройства',
     'delete_device' => 'Удаление устройства',
     'device_statistics' => 'Статистика устройств',
@@ -276,6 +276,8 @@ return [
     'screenshot_request_failed' => 'Не удалось запросить скриншот',
     'screenshot_requested' => 'Скриншот запрошен',
     'show_only_online' => 'Показывать только онлайн',
+    'refresh_devices_failed' => 'Не удалось обновить устройства',
+    'refresh_screenshots_failed' => 'Не удалось обновить скриншоты',
     'try_different_search' => 'Попробуйте изменить условия поиска',
     'port' => 'Порт',
     'view' => 'Вид',
@@ -286,7 +288,7 @@ return [
     'platform' => 'Платформа',
     'create_date' => 'Дата создания',
     'view_device' => 'Просмотр',
-    
+
     // User Group Assignments
     'user_group_assignments' => 'Назначения пользователей в группы',
     'device_assignment_management' => 'Управление назначением устройств',

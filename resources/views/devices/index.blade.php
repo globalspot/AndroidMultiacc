@@ -971,7 +971,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.device_start_failed') }}', 'error');
             });
         }
@@ -1000,7 +999,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.device_stop_failed') }}', 'error');
             });
         }
@@ -1064,7 +1062,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.screenshot_request_failed') }}', 'error');
                 // Restore original screenshot display
                 if (deviceCard) {
@@ -1111,7 +1108,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.assignment_cancel_failed') }}', 'error');
             });
         }
@@ -1169,7 +1165,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
                     showNotification('{{ __('app.limit_update_failed') }}', 'error');
                 });
             });
@@ -1214,7 +1209,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
                     deviceSelect.innerHTML = '<option value="">{{ __('app.error_loading_devices') }}</option>';
                 });
             }
@@ -1224,6 +1218,11 @@
 
         // Refresh all devices data
         async function refreshDevices() {
+            // Don't refresh if chunk loading is in progress
+            if (typeof isLoadingChunk !== 'undefined' && isLoadingChunk) {
+                return;
+            }
+            
             try {
                 const response = await fetch('{{ route("devices.refresh.all") }}', {
                     method: 'GET',
@@ -1260,7 +1259,7 @@
         function updateDevicesFromData(devices) {
             devices.forEach(deviceData => {
                 // Update card view
-                const deviceCard = document.querySelector(`div[data-device-id="${deviceData.id}"]`);
+                const deviceCard = document.querySelector(`div[data-device-id="${deviceData.id}"][data-status-ready="true"]`);
                 if (deviceCard) {
                     // Update device status
                     const currentStatus = deviceCard.getAttribute('data-device-status');
@@ -1278,7 +1277,7 @@
                 }
 
                 // Update table view
-                const deviceRow = document.querySelector(`tr[data-device-id="${deviceData.id}"]`);
+                const deviceRow = document.querySelector(`tr[data-device-id="${deviceData.id}"][data-status-ready="true"]`);
                 if (deviceRow) {
                     // Update device status
                     const currentStatus = deviceRow.getAttribute('data-device-status');
@@ -1301,7 +1300,6 @@
 
         // Translate device status to current language
         function translateDeviceStatus(status) {
-            console.log(`Translating status: "${status}"`);
             const translations = {
                 'online': '{{ __('app.online') }}',
                 'offline': '{{ __('app.offline') }}',
@@ -1311,21 +1309,16 @@
                 'unknown': '{{ __('app.unknown') }}'
             };
             const translated = translations[status] || status;
-            console.log(`Translated to: "${translated}"`);
             return translated;
         }
 
         // Update device status and controls
         function updateDeviceStatus(deviceCard, deviceData) {
-            console.log(`Updating device status to: ${deviceData.deviceStatus}`);
-            
             // Update status display with retry mechanism
             let statusElement = deviceCard.querySelector('.device-status');
-            console.log('Status element found:', statusElement);
             
             if (statusElement) {
                 const translatedStatus = translateDeviceStatus(deviceData.deviceStatus);
-                console.log(`Setting status text to: ${translatedStatus}`);
                 statusElement.textContent = translatedStatus;
                 statusElement.className = `device-status font-medium ${
                     deviceData.deviceStatus === 'running' || deviceData.deviceStatus === 'online' 
@@ -1333,13 +1326,39 @@
                         : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600')
                 }`;
             } else {
-                console.log('Status element not found. Available elements:');
                 const allElements = deviceCard.querySelectorAll('*');
                 allElements.forEach(el => {
                     if (el.className && el.className.includes('status')) {
-                        console.log('Found element with status in class:', el.className);
+                        // Element found but no logging needed
                     }
                 });
+                
+                // Try to find the status element by looking for the text pattern
+                const statusTextPattern = /{{ __('app.device_status') }}:/;
+                const textNodes = Array.from(deviceCard.querySelectorAll('*')).filter(el => 
+                    el.textContent && statusTextPattern.test(el.textContent)
+                );
+                
+                if (textNodes.length > 0) {
+                    // Look for the span element that should contain the status
+                    const potentialStatusSpan = textNodes[0].querySelector('span');
+                    if (potentialStatusSpan) {
+                        // Add the device-status class if it's missing
+                        if (!potentialStatusSpan.classList.contains('device-status')) {
+                            potentialStatusSpan.classList.add('device-status');
+                        }
+                        statusElement = potentialStatusSpan;
+                        
+                        // Now update the status
+                        const translatedStatus = translateDeviceStatus(deviceData.deviceStatus);
+                        statusElement.textContent = translatedStatus;
+                        statusElement.className = `device-status font-medium ${
+                            deviceData.deviceStatus === 'running' || deviceData.deviceStatus === 'online' 
+                                ? 'text-green-600' 
+                                : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600')
+                        }`;
+                    }
+                }
             }
 
             // Update control buttons
@@ -1358,7 +1377,6 @@
             setTimeout(() => {
                 const newStatusElement = deviceCard.querySelector('.device-status');
                 if (newStatusElement && newStatusElement.textContent !== translateDeviceStatus(deviceData.deviceStatus)) {
-                    console.log('Updating status element again after other updates');
                     const translatedStatus = translateDeviceStatus(deviceData.deviceStatus);
                     newStatusElement.textContent = translatedStatus;
                     newStatusElement.className = `device-status font-medium ${
@@ -1670,7 +1688,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.custom_name_save_failed') }}', 'error');
             });
         }
@@ -1703,7 +1720,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.custom_name_delete_failed') }}', 'error');
             });
         }
@@ -1781,7 +1797,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 showNotification('{{ __('app.custom_name_save_failed') }}', 'error');
             });
         }
@@ -2041,6 +2056,31 @@
                                 const temp = document.createElement('div');
                                 temp.innerHTML = data.html;
                                 Array.from(temp.children).forEach(child => grid.appendChild(child));
+                                
+                                // Add a small delay to ensure DOM is fully ready before background refresh
+                                setTimeout(() => {
+                                    // Mark newly loaded devices as ready for status updates
+                                    const newCards = grid.querySelectorAll('.device-card:not([data-status-ready])');
+                                    newCards.forEach(card => {
+                                        // Ensure the device-status class exists
+                                        let statusElement = card.querySelector('.device-status');
+                                        if (!statusElement) {
+                                            // Look for the status text pattern and add the class if missing
+                                            const statusTextPattern = /{{ __('app.device_status') }}:/;
+                                            const textNodes = Array.from(card.querySelectorAll('*')).filter(el => 
+                                                el.textContent && statusTextPattern.test(el.textContent)
+                                            );
+                                            
+                                            if (textNodes.length > 0) {
+                                                const potentialStatusSpan = textNodes[0].querySelector('span');
+                                                if (potentialStatusSpan && !potentialStatusSpan.classList.contains('device-status')) {
+                                                    potentialStatusSpan.classList.add('device-status');
+                                                }
+                                            }
+                                        }
+                                        card.setAttribute('data-status-ready', 'true');
+                                    });
+                                }, 100);
                             }
                         } else {
                             const body = document.getElementById('deviceTableBody');
@@ -2048,6 +2088,31 @@
                                 const temp = document.createElement('tbody');
                                 temp.innerHTML = data.html;
                                 Array.from(temp.children).forEach(child => body.appendChild(child));
+                                
+                                // Add a small delay to ensure DOM is fully ready before background refresh
+                                setTimeout(() => {
+                                    // Mark newly loaded rows as ready for status updates
+                                    const newRows = body.querySelectorAll('.device-table-row:not([data-status-ready])');
+                                    newRows.forEach(row => {
+                                        // Ensure the device-status class exists for table rows
+                                        let statusElement = row.querySelector('.device-status');
+                                        if (!statusElement) {
+                                            // Look for the status text pattern and add the class if missing
+                                            const statusTextPattern = /{{ __('app.device_status') }}:/;
+                                            const textNodes = Array.from(row.querySelectorAll('*')).filter(el => 
+                                                el.textContent && statusTextPattern.test(el.textContent)
+                                            );
+                                            
+                                            if (textNodes.length > 0) {
+                                                const potentialStatusSpan = textNodes[0].querySelector('span');
+                                                if (potentialStatusSpan && !potentialStatusSpan.classList.contains('device-status')) {
+                                                    potentialStatusSpan.classList.add('device-status');
+                                                }
+                                            }
+                                        }
+                                        row.setAttribute('data-status-ready', 'true');
+                                    });
+                                }, 100);
                             }
                         }
                         chunkOffset = data.nextOffset;
@@ -2056,9 +2121,14 @@
                         if (typeof performSearch === 'function') {
                             performSearch();
                         }
+                        
+                        // Add a small delay to ensure background refresh doesn't interfere
+                        setTimeout(() => {
+                            // Chunk loading completed
+                        }, 200);
                     }
                 } catch (e) {
-                    console.error('Failed to load next chunk', e);
+                    // Failed to load next chunk
                 } finally {
                     if (infiniteLoader) infiniteLoader.classList.add('hidden');
                     isLoadingChunk = false;
@@ -2131,6 +2201,19 @@
                     }
                 };
             }
+
+            // Mark initially loaded devices as ready for status updates
+            setTimeout(() => {
+                const initialCards = document.querySelectorAll('.device-card');
+                initialCards.forEach(card => {
+                    card.setAttribute('data-status-ready', 'true');
+                });
+                
+                const initialRows = document.querySelectorAll('.device-table-row');
+                initialRows.forEach(row => {
+                    row.setAttribute('data-status-ready', 'true');
+                });
+            }, 100);
         });
 
         // Also try initializing immediately if DOM is already loaded
@@ -2162,7 +2245,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 alert('An error occurred while assigning user to group');
             });
         });
@@ -2194,7 +2276,6 @@
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 alert('An error occurred while removing user from group');
             });
         }

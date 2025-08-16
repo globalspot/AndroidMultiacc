@@ -276,6 +276,8 @@ return [
     'screenshot_request_failed' => 'Failed to request screenshot',
     'screenshot_requested' => 'Screenshot requested',
     'show_only_online' => 'Show only online',
+    'refresh_devices_failed' => 'Failed to refresh devices',
+    'refresh_screenshots_failed' => 'Failed to refresh screenshots',
     'try_different_search' => 'Try adjusting your search terms',
     'port' => 'Port',
     'view' => 'View',
