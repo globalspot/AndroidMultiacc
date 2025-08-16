@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class DeviceController extends Controller
 {
@@ -30,6 +31,7 @@ class DeviceController extends Controller
         // Get selected filters
         $selectedGroupId = $request->query('group_id');
         $selectedUserId = $request->query('user_id');
+        $orderToken = $request->query('token');
 
         // Enforce default group when none is provided (no "All groups" view)
         if (!$selectedGroupId) {
@@ -109,6 +111,10 @@ class DeviceController extends Controller
             $userGroups = $user->allGroups()->get()->pluck('deviceGroup')->filter();
         }
         
+        // Cache the ordered device IDs for chunk loading
+        $devicesOrderToken = (string) Str::uuid();
+        session(["devices_order.$devicesOrderToken" => $devices->pluck('id')->values()->all()]);
+
         return view('devices.index', [
             'devices' => $devices,
             'statistics' => $statistics,
@@ -121,6 +127,7 @@ class DeviceController extends Controller
             'selectedGroupId' => $selectedGroupId,
             // For completeness; view can still use request('user_id') directly
             'selectedUserId' => $selectedUserId,
+            'devicesOrderToken' => $devicesOrderToken,
         ]);
     }
 
@@ -563,20 +570,28 @@ class DeviceController extends Controller
 
         $selectedGroupId = $request->query('group_id');
         $selectedUserId = $request->query('user_id');
+        $orderToken = $request->query('token');
 
-        $withDebug = (bool) $request->query('debug', false);
-        if ($withDebug) {
-            DB::flushQueryLog();
-            DB::enableQueryLog();
-            DB::connection('mysql_second')->flushQueryLog();
-            DB::connection('mysql_second')->enableQueryLog();
+        // SQL debug removed
+
+        // If we have an order token, use session-cached ordering for precise ID slicing
+        $chunk = collect();
+        $total = 0;
+        if ($orderToken) {
+            $orderedIds = (array) session("devices_order.$orderToken", []);
+            $total = count($orderedIds);
+            if ($total > 0) {
+                $sliceIds = array_slice($orderedIds, $offset, $limit);
+                if (!empty($sliceIds)) {
+                    $chunk = $this->deviceService->getDevicesByIdsForUser($user, $sliceIds);
+                }
+            }
+        } else {
+            // Fallback: full list slice
+            $devices = $this->deviceService->getAccessibleDevicesForUser($user, $selectedGroupId, $selectedUserId);
+            $total = $devices->count();
+            $chunk = $devices->slice($offset, $limit)->values();
         }
-
-        // Base accessible devices list (already sorted in service)
-        $devices = $this->deviceService->getAccessibleDevicesForUser($user, $selectedGroupId, $selectedUserId);
-
-        $total = $devices->count();
-        $chunk = $devices->slice($offset, $limit)->values();
         $hasMore = ($offset + $limit) < $total;
 
         if ($view === 'table') {
@@ -599,26 +614,7 @@ class DeviceController extends Controller
             'total' => $total,
         ];
 
-        if ($withDebug) {
-            $format = function ($query, $bindings) {
-                foreach ($bindings as $binding) {
-                    $binding = is_numeric($binding) ? $binding : (is_null($binding) ? 'NULL' : ("'" . str_replace("'", "''", (string) $binding) . "'"));
-                    $query = preg_replace('/\?/', (string) $binding, $query, 1);
-                }
-                return $query;
-            };
-
-            $primaryLogs = collect(DB::getQueryLog() ?? [])->map(function ($q) use ($format) {
-                return $format($q['query'] ?? '', $q['bindings'] ?? []);
-            });
-            $secondaryLogs = collect(DB::connection('mysql_second')->getQueryLog() ?? [])->map(function ($q) use ($format) {
-                return $format($q['query'] ?? '', $q['bindings'] ?? []);
-            });
-            $response['queries'] = [
-                'primary' => $primaryLogs->values(),
-                'mysql_second' => $secondaryLogs->values(),
-            ];
-        }
+        // SQL debug removed
 
         return response()->json($response);
     }

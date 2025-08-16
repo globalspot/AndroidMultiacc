@@ -69,6 +69,61 @@ class DeviceService
     }
 
     /**
+     * Get devices by IDs (preserving input order) and decorate with user-scoped fields
+     */
+    public function getDevicesByIdsForUser(User $user, array $deviceIds)
+    {
+        if (empty($deviceIds)) {
+            return collect();
+        }
+
+        $rows = DB::connection('mysql_second')
+            ->table('goProfiles')
+            ->whereIn('id', $deviceIds)
+            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', 'screenView', 'deviceAddress', 'valid', 'createDate', 'updateDate', 'gateUrl')
+            ->get();
+
+        // Index by id for quick lookup
+        $byId = $rows->keyBy(function ($r) { return (string) $r->id; });
+
+        // Fetch assignments for access-level and group decoration
+        $assignments = $user->getAccessibleDevices()->whereIn('device_id', $deviceIds)->values();
+        $assignById = $assignments->keyBy('device_id');
+
+        // Optional custom names (user-specific for non-admin/manager)
+        $customNames = [];
+        if ($user->isAdmin() || $user->isManager()) {
+            $customNameRows = \App\Models\CustomDeviceName::whereIn('device_id', $deviceIds)
+                ->orderBy('updated_at', 'desc')
+                ->get(['device_id', 'custom_name']);
+            foreach ($customNameRows as $row) {
+                if (!isset($customNames[$row->device_id])) {
+                    $customNames[$row->device_id] = $row->custom_name;
+                }
+            }
+        }
+
+        $result = collect();
+        foreach ($deviceIds as $id) {
+            $row = $byId->get((string) $id);
+            if (!$row) continue;
+            $assignment = $assignById->get((string) $id);
+            // Decorate similar to getAccessibleDevicesForUser
+            $row->assignment = $assignment;
+            $row->access_level = $assignment->access_level ?? null;
+            $row->group = $assignment->deviceGroup ?? null;
+            $row->port_number = $this->extractPortFromAddress($row->deviceAddress ?? '');
+            $row->display_name = ($user->isAdmin() || $user->isManager())
+                ? ($customNames[(string)$row->id] ?? $row->deviceName)
+                : ($user->getCustomDeviceName($row->id) ?? $row->deviceName);
+            $row->has_custom_name = ($row->display_name && $row->display_name !== $row->deviceName);
+            $result->push($row);
+        }
+
+        return $result;
+    }
+
+    /**
      * Get devices accessible to a specific user
      */
     public function getAccessibleDevicesForUser(User $user, $filterGroupId = null, $filterUserId = null)

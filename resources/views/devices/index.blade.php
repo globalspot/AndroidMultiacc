@@ -964,10 +964,8 @@
             .then(data => {
                 if (data.success) {
                     showNotification(data.message, 'success');
-                    // Reload page to update device status
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                    // Refresh devices to update UI instead of full reload
+                    setTimeout(() => { refreshDevices(); }, 500);
                 } else {
                     showNotification(data.message, 'error');
                 }
@@ -995,10 +993,8 @@
             .then(data => {
                 if (data.success) {
                     showNotification(data.message, 'success');
-                    // Reload page to update device status
-                    setTimeout(() => {
-                        location.reload();
-                    }, 1000);
+                    // Refresh devices to update UI instead of full reload
+                    setTimeout(() => { refreshDevices(); }, 500);
                 } else {
                     showNotification(data.message, 'error');
                 }
@@ -1407,49 +1403,18 @@
             }
         }
 
-        // Update action links based on device status
+        // Update action links based on device status (disabled: do not render assign/unassign controls dynamically)
         function updateActionLinks(deviceCard, deviceData) {
             const actionLinksContainer = deviceCard.querySelector('.action-links');
             if (actionLinksContainer) {
-                let actionLinksHTML = '';
-                
-
-                
-                // Show unassign button for admins (always available)
-                if (deviceData.access_level === 'owner' || deviceData.access_level === 'admin') {
-                    actionLinksHTML += `
-                        <form action="/devices/${deviceData.id}/unassign/${deviceData.user_id}" 
-                            method="POST" class="inline">
-                            <input type="hidden" name="_token" value="${document.querySelector('meta[name="csrf-token"]').getAttribute('content')}">
-                            <input type="hidden" name="_method" value="DELETE">
-                            <button type="submit" 
-                                class="text-red-600 hover:text-red-900 text-xs font-medium"
-                                onclick="return confirm('{{ __('app.unassign_device') }}?')">
-                                {{ __('app.unassign_device') }}
-                            </button>
-                        </form>
-                    `;
-                }
-                
-                // Show cancel assignment button for admins and managers
-                // Note: We'll need to check if the user has permission to cancel assignments
-                // For now, we'll show it for all users and let the backend handle permissions
-                actionLinksHTML += `
-                    <button onclick="cancelDeviceAssignment(${deviceData.id})" 
-                            class="text-orange-600 hover:text-orange-900 text-xs font-medium ml-2">
-                        {{ __('app.cancel_assignment') }}
-                    </button>
-                `;
-                
-                actionLinksContainer.innerHTML = actionLinksHTML;
-            } else {
-                console.log('Action links container not found');
+                actionLinksContainer.innerHTML = '';
             }
         }
 
         // Update table view device status and controls
         function updateTableDeviceStatus(deviceRow, deviceData) {
             // Update status cell
+            // Columns: 1 Port, 2 Name, 3 Group, 4 Platform, 5 OS, 6 Status, 7 Create date, 8 Actions
             const statusCell = deviceRow.querySelector('td:nth-child(6)'); // Status column
             if (statusCell) {
                 const statusSpan = statusCell.querySelector('span');
@@ -1465,7 +1430,7 @@
             }
 
             // Update action buttons
-            const actionsCell = deviceRow.querySelector('td:nth-child(7)'); // Actions column
+            const actionsCell = deviceRow.querySelector('td:nth-child(8)'); // Actions column
             if (actionsCell) {
                 const buttonsContainer = actionsCell.querySelector('div');
                 if (buttonsContainer) {
@@ -1514,17 +1479,7 @@
                 </button>
             `;
             
-            // Show cancel assignment button for admins and managers
-            buttonsHTML += `
-                <button onclick="cancelDeviceAssignment(${deviceData.id})" 
-                        class="bg-orange-500 hover:bg-orange-700 text-white text-xs font-bold py-1 px-2 rounded ml-2" 
-                        title="{{ __('app.cancel_assignment') }}">
-                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                    </svg>
-                </button>
-            `;
-            
+            // No cancel assignment/unassign buttons in chunk or dynamic updates
             return buttonsHTML;
         }
 
@@ -2045,6 +2000,7 @@
             const chunkLimit = 20;
             let isLoadingChunk = false;
             let hasMoreChunks = {{ $devices->count() > 20 ? 'true' : 'false' }};
+            const devicesOrderToken = @json($devicesOrderToken ?? null);
 
             const infiniteLoader = document.getElementById('infiniteLoader');
 
@@ -2057,6 +2013,7 @@
                 params.set('offset', String(chunkOffset));
                 params.set('limit', String(chunkLimit));
                 params.set('view', currentView);
+                if (devicesOrderToken) params.set('token', devicesOrderToken);
                 const groupId = '{{ request('group_id') }}';
                 const userId = '{{ request('user_id') }}';
                 if (groupId) params.set('group_id', groupId);
