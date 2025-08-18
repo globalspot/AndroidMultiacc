@@ -196,9 +196,9 @@
     </style>
 
     <!-- Create Device Modal -->
-    <div id="createDeviceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-        <div class="absolute inset-0 flex items-center justify-center p-4">
-            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+    <div id="createDeviceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                 <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
                     <h3 class="text-lg font-medium text-gray-900">{{ __('app.create_device_title') }}</h3>
                     <button id="closeCreateDeviceModal" class="text-gray-500 hover:text-gray-700">✕</button>
