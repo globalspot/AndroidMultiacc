@@ -1,4 +1,7 @@
 <x-app-layout>
+    @push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.2.4/ol.css" integrity="sha384-TD0YxjZ2J2wGQ0Mm/0uG9G8zQYap6jzjXf3gH0S4oF6v6H0wq0z2pQxWJ8fKpG8N" crossorigin="anonymous" />
+    @endpush
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-white leading-tight">
@@ -90,6 +93,105 @@
             .group-user-filter label {
                 width: 100%;
             }
+        }
+
+        /* Normalize OpenLayers controls inside map picker */
+        #mapPicker .ol-control {
+            font-family: inherit;
+            pointer-events: none; /* avoid invisible boxes blocking map */
+        }
+        #mapPicker .ol-control button,
+        #mapPicker .ol-control input {
+            pointer-events: auto; /* allow interaction only on actual controls */
+        }
+        #mapPicker .ol-control button {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            line-height: 30px;
+            font-size: 16px;
+            border-radius: 0.375rem; /* rounded-md */
+            background-color: rgba(255, 255, 255, 0.95);
+            color: #111827; /* gray-900 */
+            border: 1px solid #d1d5db; /* gray-300 */
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+        /* Force bottom-right placement for all controls */
+        .ol-control {
+            left: auto !important;
+            right: 8px !important;
+            width: auto !important;
+            max-width: 44px; /* keep controls narrow */
+        }
+        /* Keep zoom container tight to its buttons */
+        #mapPicker .ol-zoom {
+            display: inline-flex !important;
+            flex-direction: column;
+            gap: 6px;
+            top: auto !important;
+            left: auto !important;
+            bottom: 56px !important;
+            right: 8px !important;
+            width: auto !important;
+            max-width: 44px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        #mapPicker .ol-rotate {
+            top: auto !important;
+            left: auto !important;
+            bottom: 108px !important;
+            right: 8px !important;
+        }
+        /* Attribution placement bottom-right */
+        #mapPicker .ol-attribution {
+            left: auto !important;
+            right: 8px !important;
+            bottom: 8px !important;
+            top: auto !important;
+        }
+        #mapPicker .ol-attribution.ol-uncollapsible {
+            left: auto !important;
+            right: 8px !important;
+            bottom: 8px !important;
+            top: auto !important;
+            width: auto !important;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 0.375rem;
+            border: 1px solid #e5e7eb; /* gray-200 */
+        }
+        /* Collapsed state: show only small button, no bar */
+        #mapPicker .ol-attribution.ol-collapsed {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            width: auto !important;
+            padding: 0 !important;
+        }
+        #mapPicker .ol-attribution ul {
+            font-size: 11px;
+            color: #374151; /* gray-700 */
+            margin: 2px 6px;
+            white-space: nowrap;
+        }
+        /* When collapsible, hide the long list by default */
+        #mapPicker .ol-attribution:not(.ol-uncollapsible).ol-collapsed ul {
+            display: none !important;
+        }
+        /* Do not block map dragging when attribution is visible */
+        #mapPicker .ol-attribution { pointer-events: none; }
+        #mapPicker .ol-attribution button { pointer-events: auto; }
+        #mapPicker .ol-attribution ul { pointer-events: none; }
+
+        /* Completely hide hidden rotate control to avoid wide invisible box */
+        #mapPicker .ol-rotate.ol-hidden {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
         }
     </style>
 
@@ -1022,6 +1124,7 @@
     </div>
 
     @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js" crossorigin="anonymous"></script>
     <script>
         // Create Device modal toggle
         const modal = document.getElementById('createDeviceModal');
@@ -1047,31 +1150,33 @@
         if (closeBtn) closeBtn.addEventListener('click', closeCreateModal);
         if (closeBtnFooter) closeBtnFooter.addEventListener('click', closeCreateModal);
 
-        // Map picker (Leaflet). Assumes Leaflet scripts/styles are globally available if used; we lazy-init.
+        // Map picker (OpenLayers)
         function initMapPicker() {
             if (mapInstance) return;
-            if (!window.L) return; // Leaflet not loaded; skip silently
-            mapInstance = L.map('mapPicker').setView([0, 0], 2);
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }).addTo(mapInstance);
-            mapInstance.on('click', function(e) {
-                const lat = e.latlng.lat.toFixed(6);
-                const lng = e.latlng.lng.toFixed(6);
+            if (!window.ol) return;
+            const view = new ol.View({ center: ol.proj.fromLonLat([0, 0]), zoom: 2 });
+            const raster = new ol.layer.Tile({ source: new ol.source.OSM() });
+            const vectorSource = new ol.source.Vector();
+            const vectorLayer = new ol.layer.Vector({ source: vectorSource });
+
+            const controls = ol.control.defaults.defaults({ attribution: false });
+            mapInstance = new ol.Map({ target: 'mapPicker', layers: [raster, vectorLayer], view, controls });
+            mapInstance.addControl(new ol.control.Attribution({ collapsible: true, collapsed: true }));
+            mapInstance.on('singleclick', function(evt) {
+                const lonlat = ol.proj.toLonLat(evt.coordinate);
+                const lng = lonlat[0].toFixed(6);
+                const lat = lonlat[1].toFixed(6);
                 document.getElementById('newDeviceLat').value = lat;
                 document.getElementById('newDeviceLng').value = lng;
-                if (!mapMarker) {
-                    mapMarker = L.marker(e.latlng).addTo(mapInstance);
-                } else {
-                    mapMarker.setLatLng(e.latlng);
-                }
+                vectorSource.clear();
+                vectorSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(evt.coordinate) }));
             });
             // Try to center to user's location
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(pos) {
-                    const coords = [pos.coords.latitude, pos.coords.longitude];
-                    mapInstance.setView(coords, 12);
+                    const lonLat = [pos.coords.longitude, pos.coords.latitude];
+                    view.setCenter(ol.proj.fromLonLat(lonLat));
+                    view.setZoom(12);
                 });
             }
         }
@@ -1081,7 +1186,7 @@
                     const isHidden = mapContainer.classList.contains('hidden');
                     if (isHidden) {
                         mapContainer.classList.remove('hidden');
-                        setTimeout(() => { initMapPicker(); if (mapInstance) mapInstance.invalidateSize(); }, 50);
+                        setTimeout(() => { initMapPicker(); if (mapInstance) mapInstance.updateSize(); }, 50);
                     } else {
                         mapContainer.classList.add('hidden');
                     }
