@@ -237,6 +237,7 @@ return [
     'automation_controls' => 'Automation Controls',
     'device_automation' => 'Device Automation',
     'starting' => 'Starting',
+    'creating' => 'Creating',
     'stopped' => 'Stopped',
     'online' => 'Online',
     'running' => 'Running',
@@ -264,6 +265,21 @@ return [
     'no_chrome_apps_available' => 'No chrome apps available',
     'chrome_install_failed' => 'Chrome install failed',
     'chrome_install_success' => 'Chrome install success',
+
+    // Aliases for backend-provided raw status phrases (to ensure translation works)
+    'Creating device...' => 'Creating device...',
+    'Device created' => 'Device created',
+    'Installing gapps...' => 'Installing gapps...',
+    'OpenGapps zip not found' => 'OpenGapps zip not found',
+    'Zip file push failed' => 'Zip file push failed',
+    'Gapps installation failed' => 'Gapps installation failed',
+    'Gapps installation success' => 'Gapps installation success',
+    'Installing chrome' => 'Installing chrome',
+    'No chrome apps available' => 'No chrome apps available',
+    'Chrome install failed' => 'Chrome install failed',
+    'Chrome install success' => 'Chrome install success',
+    // Startup/shutdown raw phrases
+    'Starting device...' => 'Starting device...',
 
     // Custom device names
     'custom_name_saved_successfully' => 'Custom name saved successfully',

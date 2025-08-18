@@ -92,11 +92,15 @@
     </td>
     <!-- Status -->
     <td class="px-6 py-4 whitespace-nowrap">
+        @php
+            $statusValue = $device->deviceStatus ?? 'offline';
+            $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+        @endphp
         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium device-status
-            @if($device->deviceStatus === 'online') bg-green-100 text-green-800
-            @elseif($device->deviceStatus === 'starting') bg-yellow-100 text-yellow-800
+            @if($statusKey === 'online') bg-green-100 text-green-800
+            @elseif($statusKey === 'starting') bg-yellow-100 text-yellow-800
             @else bg-red-100 text-red-800 @endif">
-            {{ __('app.' . ($device->deviceStatus ?? 'offline')) }}
+            {{ __('app.' . $statusKey) }}
         </span>
     </td>
 

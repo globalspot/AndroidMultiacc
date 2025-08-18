@@ -142,8 +142,12 @@
                 <div class="mb-3">
                     <div class="text-xs text-gray-500">
                         {{ __('app.device_status') }}: 
-                        <span class="device-status font-medium {{ $device->deviceStatus === 'running' || $device->deviceStatus === 'online' ? 'text-green-600' : ($device->deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600') }}">
-                            {{ __('app.' . ($device->deviceStatus ?? 'unknown')) }}
+                        @php
+                            $statusValue = $device->deviceStatus ?? 'unknown';
+                            $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+                        @endphp
+                        <span class="device-status font-medium {{ $statusKey === 'running' || $statusKey === 'online' ? 'text-green-600' : ($statusKey === 'starting' ? 'text-blue-600' : 'text-yellow-600') }}">
+                            {{ __('app.' . $statusKey) }}
                         </span>
                     </div>
                 </div>

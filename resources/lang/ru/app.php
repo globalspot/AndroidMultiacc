@@ -237,6 +237,7 @@ return [
     'automation_controls' => 'Элементы управления автоматизацией',
     'device_automation' => 'Автоматизация устройства',
     'starting' => 'Запуск',
+    'creating' => 'Создание',
     'stopped' => 'Остановлено',
     'online' => 'В сети',
     'running' => 'Работает',
@@ -264,6 +265,21 @@ return [
     'no_chrome_apps_available' => 'Нет доступных приложений Chrome',
     'chrome_install_failed' => 'Сбой установки Chrome',
     'chrome_install_success' => 'Chrome установлен',
+
+    // Алиасы для «сырых» статусов с бэкенда (для корректного перевода)
+    'Creating device...' => 'Создание устройства...',
+    'Device created' => 'Устройство создано',
+    'Installing gapps...' => 'Установка gapps...',
+    'OpenGapps zip not found' => 'Не найден архив OpenGapps',
+    'Zip file push failed' => 'Не удалось отправить zip-файл',
+    'Gapps installation failed' => 'Сбой установки Gapps',
+    'Gapps installation success' => 'Gapps установлены',
+    'Installing chrome' => 'Установка Chrome',
+    'No chrome apps available' => 'Нет доступных приложений Chrome',
+    'Chrome install failed' => 'Сбой установки Chrome',
+    'Chrome install success' => 'Chrome установлен',
+    // Фразы запуска/остановки в «сыром» виде
+    'Starting device...' => 'Запуск устройства...',
 
     // Custom device names
     'custom_name_saved_successfully' => 'Пользовательское имя сохранено',

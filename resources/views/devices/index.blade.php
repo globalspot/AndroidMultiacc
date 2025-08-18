@@ -800,7 +800,11 @@
                                                 <div class="text-xs text-gray-500">
                                                     {{ __('app.device_status') }}: 
                                                     <span class="device-status font-medium {{ $device->deviceStatus === 'running' || $device->deviceStatus === 'online' ? 'text-green-600' : ($device->deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600') }}">
-                                                        {{ __('app.' . ($device->deviceStatus ?? 'unknown')) }}
+                                                        @php
+                                                            $statusValue = $device->deviceStatus ?? 'unknown';
+                                                            $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+                                                        @endphp
+                                                        {{ __('app.' . $statusKey) }}
                                                     </span>
                                                 </div>
                                             </div>
@@ -1021,11 +1025,15 @@
                                             
                                             <!-- Status -->
                                             <td class="px-6 py-4 whitespace-nowrap">
+                                                @php
+                                                    $statusValue = $device->deviceStatus ?? 'offline';
+                                                    $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+                                                @endphp
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium device-status
-                                                    @if($device->deviceStatus === 'online') bg-green-100 text-green-800
-                                                    @elseif($device->deviceStatus === 'starting') bg-yellow-100 text-yellow-800
+                                                    @if($statusKey === 'online') bg-green-100 text-green-800
+                                                    @elseif($statusKey === 'starting') bg-yellow-100 text-yellow-800
                                                     @else bg-red-100 text-red-800 @endif">
-                                                    {{ __('app.' . ($device->deviceStatus ?? 'offline')) }}
+                                                    {{ __('app.' . $statusKey) }}
                                                 </span>
                                             </td>
                                             <!-- Create Date -->
@@ -1599,9 +1607,49 @@
                 'stopped': '{{ __('app.stopped') }}',
                 'running': '{{ __('app.running') }}',
                 'failed': '{{ __('app.failed') }}',
+                'creating': '{{ __('app.creating') }}',
+                // Canonical keys for creation timeline
+                'creating_device': '{{ __('app.creating_device') }}',
+                'device_created': '{{ __('app.device_created') }}',
+                'installing_gapps': '{{ __('app.installing_gapps') }}',
+                'opengapps_zip_not_found': '{{ __('app.opengapps_zip_not_found') }}',
+                'zip_file_push_failed': '{{ __('app.zip_file_push_failed') }}',
+                'gapps_install_failed': '{{ __('app.gapps_install_failed') }}',
+                'gapps_install_success': '{{ __('app.gapps_install_success') }}',
+                'installing_chrome': '{{ __('app.installing_chrome') }}',
+                'no_chrome_apps_available': '{{ __('app.no_chrome_apps_available') }}',
+                'chrome_install_failed': '{{ __('app.chrome_install_failed') }}',
+                'chrome_install_success': '{{ __('app.chrome_install_success') }}',
+                // Raw phrases possibly coming from backend
+                'Creating device...': '{{ __('app.creating_device') }}',
+                'Device created': '{{ __('app.device_created') }}',
+                'Installing gapps...': '{{ __('app.installing_gapps') }}',
+                'OpenGapps zip not found': '{{ __('app.opengapps_zip_not_found') }}',
+                'Zip file push failed': '{{ __('app.zip_file_push_failed') }}',
+                'Gapps installation failed': '{{ __('app.gapps_install_failed') }}',
+                'Gapps installation success': '{{ __('app.gapps_install_success') }}',
+                'Installing chrome': '{{ __('app.installing_chrome') }}',
+                'No chrome apps available': '{{ __('app.no_chrome_apps_available') }}',
+                'Chrome install failed': '{{ __('app.chrome_install_failed') }}',
+                'Chrome install success': '{{ __('app.chrome_install_success') }}',
+                // Historic variant observed in data stream
+                'app.Installing gapps...': '{{ __('app.installing_gapps') }}',
                 'unknown': '{{ __('app.unknown') }}'
             };
-            const translated = translations[status] || status;
+            // Normalize incoming status
+            let key = (status === undefined || status === null || status === '') ? 'creating' : String(status);
+            if (key.startsWith('app.')) {
+                key = key.slice(4);
+            }
+            // Try exact, then lowercase fallback for canonical states
+            let translated = translations[key];
+            if (!translated) {
+                const lower = key.toLowerCase();
+                if (['online','offline','starting','stopped','running','failed','creating','unknown'].includes(lower)) {
+                    translated = translations[lower];
+                }
+            }
+            translated = translated || key;
             return translated;
         }
 
