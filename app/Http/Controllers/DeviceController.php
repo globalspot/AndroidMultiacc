@@ -840,6 +840,192 @@ class DeviceController extends Controller
     }
 
     /**
+     * Batch create devices
+     */
+    public function batchCreate(Request $request)
+    {
+        $request->validate([
+            'count' => 'required|integer|min:1|max:500',
+            'hardware_profile_ids' => 'nullable|array',
+            'hardware_profile_ids.*' => 'string|max:64',
+            'os_image_ids' => 'nullable|array',
+            'os_image_ids.*' => 'string|max:64',
+            'proxy_list' => 'nullable|string',
+            'proxy_login' => 'nullable|string|max:255',
+            'proxy_pass' => 'nullable|string|max:255',
+            'gate_url' => 'required|string|max:50',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+            'max_deviation' => 'nullable|numeric|min:0',
+        ]);
+
+        try {
+            $now = time();
+            $user = $request->user();
+
+            // Resolve group ID by gate URL for auto-assignment
+            $groupId = null;
+            if ($request->filled('gate_url')) {
+                $groupId = \App\Models\DeviceGroup::where('gate_url', $request->input('gate_url'))->value('id');
+            }
+
+            // Prepare selections
+            $hwIds = array_values(array_filter((array) $request->input('hardware_profile_ids', [])));
+            $osIds = array_values(array_filter((array) $request->input('os_image_ids', [])));
+
+            // Parse proxy list: supports lines with host:port, and port ranges 1000-2000 or comma lists
+            $rawProxyLines = preg_split('/\r?\n/', (string) $request->input('proxy_list', '')) ?: [];
+            $proxies = [];
+            foreach ($rawProxyLines as $line) {
+                $line = trim($line);
+                if ($line === '') continue;
+                // IP range + port or port-range: 192.168.0.1-192.168.0.10:1000-1002
+                if (preg_match('/^(\d{1,3}(?:\.\d{1,3}){3})-(\d{1,3}(?:\.\d{1,3}){3}):(\d+)(?:-(\d+))?$/', $line, $m)) {
+                    $startIp = $m[1];
+                    $endIp = $m[2];
+                    $portStart = (int) $m[3];
+                    $portEnd = isset($m[4]) ? (int) $m[4] : $portStart;
+                    $startOctets = explode('.', $startIp);
+                    $endOctets = explode('.', $endIp);
+                    // Support ranges within the same /24 for safety
+                    if ($startOctets[0] === $endOctets[0] && $startOctets[1] === $endOctets[1] && $startOctets[2] === $endOctets[2]) {
+                        $hostPrefix = $startOctets[0] . '.' . $startOctets[1] . '.' . $startOctets[2] . '.';
+                        $a = (int) $startOctets[3];
+                        $b = (int) $endOctets[3];
+                        if ($b >= $a) {
+                            for ($oct = $a; $oct <= $b; $oct++) {
+                                for ($pp = $portStart; $pp <= $portEnd; $pp++) {
+                                    $proxies[] = $hostPrefix . $oct . ':' . $pp;
+                                }
+                            }
+                            continue;
+                        }
+                    }
+                    // Fallback: if not same /24 or invalid, treat as is
+                    $proxies[] = $startIp . ':' . $portStart;
+                    continue;
+                }
+                // Handle patterns like host:1000-1002 or host:1000,1001
+                if (preg_match('/^([^:\s]+):(\d+)-(\d+)$/', $line, $m)) {
+                    $host = $m[1];
+                    $start = (int) $m[2];
+                    $end = (int) $m[3];
+                    if ($end >= $start) {
+                        for ($p = $start; $p <= $end; $p++) {
+                            $proxies[] = $host . ':' . $p;
+                        }
+                    }
+                } elseif (preg_match('/^([^:\s]+):(\d+(?:,\d+)*)$/', $line, $m)) {
+                    $host = $m[1];
+                    $ports = explode(',', $m[2]);
+                    foreach ($ports as $pp) {
+                        $pp = trim($pp);
+                        if ($pp !== '' && ctype_digit($pp)) {
+                            $proxies[] = $host . ':' . (int) $pp;
+                        }
+                    }
+                } else {
+                    // Plain host:port
+                    $proxies[] = $line;
+                }
+            }
+
+            $count = (int) $request->input('count');
+            $created = [];
+
+            for ($i = 0; $i < $count; $i++) {
+                // Pick hardware profile
+                $hwId = null;
+                $platform = '';
+                if (!empty($hwIds)) {
+                    $hwId = $hwIds[$i % count($hwIds)];
+                    $hw = \App\Models\HardwareProfile::find($hwId);
+                    $platform = $hw ? substr((string) $hw->title, 0, 250) : '';
+                }
+
+                // Pick OS image
+                $deviceOsValue = '';
+                if (!empty($osIds)) {
+                    $osId = $osIds[$i % count($osIds)];
+                    $os = \App\Models\OsImage::find($osId);
+                    if ($os) {
+                        $deviceOsValue = (string) $os->version;
+                    }
+                }
+
+                // Pick proxy if provided
+                $proxyHostPort = '';
+                if (!empty($proxies)) {
+                    $proxyHostPort = substr((string) $proxies[$i % count($proxies)], 0, 50);
+                }
+
+                // Derive name based on HW if available
+                $name = '';
+                if ($platform !== '') {
+                    $name = substr($platform . '.' . \Illuminate\Support\Str::random(10), 0, 100);
+                }
+
+                // Coordinates with deviation
+                $lat = $request->input('latitude');
+                $lon = $request->input('longitude');
+                $maxDev = (float) ($request->input('max_deviation') ?? 0);
+                if ($lat !== null && $lon !== null && $maxDev > 0) {
+                    // Simple jitter within +/- maxDev for both lat and lon
+                    $jitterLat = ((mt_rand() / mt_getrandmax()) * 2 - 1) * $maxDev;
+                    $jitterLon = ((mt_rand() / mt_getrandmax()) * 2 - 1) * $maxDev;
+                    $lat = (float) $lat + $jitterLat;
+                    $lon = (float) $lon + $jitterLon;
+                }
+
+                $data = [
+                    'createDate' => $now,
+                    'deviceName' => $name,
+                    'devicePlatform' => $platform,
+                    'deviceOs' => substr($deviceOsValue, 0, 250),
+                    'proxy' => $proxyHostPort,
+                    'proxyLogin' => $request->input('proxy_login') ? substr((string) $request->input('proxy_login'), 0, 100) : null,
+                    'proxyPass' => $request->input('proxy_pass') ? substr((string) $request->input('proxy_pass'), 0, 100) : null,
+                    'gateUrl' => substr((string) $request->input('gate_url'), 0, 50),
+                    'statusDate' => 0,
+                ];
+                if ($lat !== null) {
+                    $data['lat'] = substr((string) $lat, 0, 150);
+                }
+                if ($lon !== null) {
+                    $data['lon'] = substr((string) $lon, 0, 150);
+                }
+
+                $id = \DB::connection('mysql_second')->table('goProfiles')->insertGetId($data);
+
+                // Auto-assign to creator as owner
+                try {
+                    $this->deviceService->assignDeviceToUser((string) $id, $user->id, $groupId, 'owner');
+                } catch (\Throwable $e) {
+                    \Log::warning('Auto-assign failed for new batch device', [
+                        'device_id' => $id,
+                        'user_id' => $user->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                $created[] = $id;
+            }
+
+            return response()->json([
+                'success' => true,
+                'created_ids' => $created,
+                'count' => count($created),
+                'message' => __('app.devices_created_successfully'),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Cancel device assignment (admin and manager only)
      */
     public function cancelAssignment(Request $request, $deviceId)

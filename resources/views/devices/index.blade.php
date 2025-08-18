@@ -14,6 +14,28 @@
     </x-slot>
 
     <style>
+        /* Select2 tag cloud gradient styling to match site theme */
+        .select2-container--default .select2-selection--multiple {
+            border-color: #d1d5db; /* gray-300 */
+            padding: 4px;
+            min-height: 44px;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice {
+            background: linear-gradient(135deg, #3b82f6 0%, #9333ea 100%);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 0.5rem; /* rounded */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            padding: 4px 8px;
+            margin-top: 6px;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+            color: rgba(255,255,255,0.9);
+            margin-right: 6px;
+        }
+        .select2-container--default .select2-selection--multiple .select2-selection__rendered li.select2-search.select2-search--inline .select2-search__field {
+            margin-top: 8px;
+        }
         /* Ensure proper text display in device cards */
         .device-name-display {
             word-wrap: break-word;
@@ -116,6 +138,25 @@
             border: 1px solid #d1d5db; /* gray-300 */
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
         }
+        /* Apply same styling to batch picker controls */
+        #batchMapPicker .ol-control {
+            font-family: inherit;
+            pointer-events: none;
+        }
+        #batchMapPicker .ol-control button,
+        #batchMapPicker .ol-control input { pointer-events: auto; }
+        #batchMapPicker .ol-control button {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            line-height: 30px;
+            font-size: 16px;
+            border-radius: 0.375rem;
+            background-color: rgba(255,255,255,0.95);
+            color: #111827;
+            border: 1px solid #d1d5db;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
         /* Force bottom-right placement for all controls */
         .ol-control {
             left: auto !important;
@@ -143,6 +184,25 @@
             bottom: 108px !important;
             right: 8px !important;
         }
+        #batchMapPicker .ol-zoom {
+            display: inline-flex !important;
+            flex-direction: column;
+            gap: 6px;
+            top: auto !important;
+            left: auto !important;
+            bottom: 56px !important;
+            right: 8px !important;
+            width: auto !important;
+            max-width: 44px !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        #batchMapPicker .ol-rotate {
+            top: auto !important;
+            left: auto !important;
+            bottom: 108px !important;
+            right: 8px !important;
+        }
         /* Attribution placement bottom-right */
         #mapPicker .ol-attribution {
             left: auto !important;
@@ -161,8 +221,32 @@
             border-radius: 0.375rem;
             border: 1px solid #e5e7eb; /* gray-200 */
         }
+        #batchMapPicker .ol-attribution {
+            left: auto !important;
+            right: 8px !important;
+            bottom: 8px !important;
+            top: auto !important;
+        }
+        #batchMapPicker .ol-attribution.ol-uncollapsible {
+            left: auto !important;
+            right: 8px !important;
+            bottom: 8px !important;
+            top: auto !important;
+            width: auto !important;
+            padding: 2px 6px;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 0.375rem;
+            border: 1px solid #e5e7eb;
+        }
         /* Collapsed state: show only small button, no bar */
         #mapPicker .ol-attribution.ol-collapsed {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            width: auto !important;
+            padding: 0 !important;
+        }
+        #batchMapPicker .ol-attribution.ol-collapsed {
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
@@ -175,8 +259,17 @@
             margin: 2px 6px;
             white-space: nowrap;
         }
+        #batchMapPicker .ol-attribution ul {
+            font-size: 11px;
+            color: #374151;
+            margin: 2px 6px;
+            white-space: nowrap;
+        }
         /* When collapsible, hide the long list by default */
         #mapPicker .ol-attribution:not(.ol-uncollapsible).ol-collapsed ul {
+            display: none !important;
+        }
+        #batchMapPicker .ol-attribution:not(.ol-uncollapsible).ol-collapsed ul {
             display: none !important;
         }
         /* Do not block map dragging when attribution is visible */
@@ -184,8 +277,21 @@
         #mapPicker .ol-attribution button { pointer-events: auto; }
         #mapPicker .ol-attribution ul { pointer-events: none; }
 
+        /* Apply same controls fix for batch map */
+        #batchMapPicker .ol-attribution { pointer-events: none; }
+        #batchMapPicker .ol-attribution button { pointer-events: auto; }
+        #batchMapPicker .ol-attribution ul { pointer-events: none; }
+
         /* Completely hide hidden rotate control to avoid wide invisible box */
         #mapPicker .ol-rotate.ol-hidden {
+            display: none !important;
+            width: 0 !important;
+            height: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            border: 0 !important;
+        }
+        #batchMapPicker .ol-rotate.ol-hidden {
             display: none !important;
             width: 0 !important;
             height: 0 !important;
@@ -265,6 +371,85 @@
                 <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-end space-x-3">
                     <button id="closeCreateDeviceModalFooter" class="px-4 py-2 rounded-md border">{{ __('app.cancel') }}</button>
                     <button id="submitCreateDevice" class="px-4 py-2 rounded-md bg-indigo-600 text-white">{{ __('app.create') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batch Create Devices Modal -->
+    <div id="batchCreateModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">{{ __('app.batch_create_devices_title') }}</h3>
+                    <button id="closeBatchCreateModal" class="text-gray-500 hover:text-gray-700">✕</button>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.devices_count') }}</label>
+                            <input type="number" min="1" id="batchDeviceCount" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.gate_urls_managed') }}</label>
+                            <select id="batchGateUrl" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                                @foreach($createDeviceGateUrls as $g)
+                                    <option value="{{ $g }}">{{ $g }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.hardware_profiles') }}</label>
+                            <select id="batchHwProfiles" multiple data-placeholder="{{ __('app.hardware_profiles') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none min-h-[120px] tag-select">
+                                @foreach($hardwareProfiles as $hp)
+                                    <option value="{{ $hp->id }}">{{ $hp->title }} ({{ $hp->dimension }})</option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">{{ __('app.random') }}</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.os_images') }}</label>
+                            <select id="batchOsImages" multiple data-placeholder="{{ __('app.os_images') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none min-h-[120px] tag-select">
+                                @foreach($osImages as $os)
+                                    <option value="{{ $os->id }}">{{ $os->android }} (SDK {{ $os->skdVersion }}, {{ $os->arch }})</option>
+                                @endforeach
+                            </select>
+                            <p class="text-xs text-gray-500 mt-1">{{ __('app.random') }}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('app.proxy_list') }}</label>
+                        <textarea id="batchProxyList" rows="4" placeholder="ip:port or ip-range:port-range" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">{{ __('app.proxy_each_newline_hint') }}</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.proxy_login') }}</label>
+                            <input type="text" id="batchProxyLogin" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.proxy_pass') }}</label>
+                            <input type="password" id="batchProxyPass" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('app.latitude') }} / {{ __('app.longitude') }}</label>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <input type="text" id="batchLat" placeholder="{{ __('app.latitude') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                            <input type="text" id="batchLng" placeholder="{{ __('app.longitude') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                            <input type="number" step="0.000001" id="batchMaxDeviation" placeholder="{{ __('app.max_coords_deviation') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                            <button id="openBatchMapPicker" type="button" class="mt-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm">{{ __('app.pick_on_map') }}</button>
+                        </div>
+                        <div id="batchMapPickerContainer" class="mt-3 hidden">
+                            <div id="batchMapPicker" style="height: 300px;" class="rounded-md border"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-end space-x-3">
+                    <button id="closeBatchCreateModalFooter" class="px-4 py-2 rounded-md border">{{ __('app.cancel') }}</button>
+                    <button id="submitBatchCreate" class="px-4 py-2 rounded-md bg-indigo-600 text-white">{{ __('app.create') }}</button>
                 </div>
             </div>
         </div>
@@ -576,9 +761,14 @@
                                     {{ __('app.devices') }}
                                 @endif
                             </h3>
-                            <button id="openCreateDeviceModal" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
-                                {{ __('app.create_device') }}
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button id="openCreateDeviceModal" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                                    {{ __('app.create_device') }}
+                                </button>
+                                <button id="openBatchCreateModal" type="button" class="inline-flex items-center px-4 py-2 border text-sm font-medium rounded-md shadow-sm text-indigo-700 bg-white hover:bg-gray-50 focus:outline-none">
+                                    {{ __('app.batch_create_devices') }}
+                                </button>
+                            </div>
                         </div>
                         <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center space-y-3 lg:space-y-0 lg:gap-x-4 lg:gap-y-2 filter-container">
                                 <!-- View Toggle -->
@@ -1133,6 +1323,9 @@
 
     @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/ol@v9.2.4/dist/ol.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
         // Create Device modal toggle
         const modal = document.getElementById('createDeviceModal');
@@ -1237,6 +1430,114 @@
                     if (data.success) {
                         showNotification('{{ __('app.create') }}', 'success');
                         closeCreateModal();
+                        setTimeout(() => { refreshDevices && refreshDevices(); }, 600);
+                    } else {
+                        showNotification(data.message || 'Error', 'error');
+                    }
+                } catch (e) {
+                    showNotification('Request failed', 'error');
+                }
+            });
+        }
+
+        // Batch modal toggle and map
+        const batchModal = document.getElementById('batchCreateModal');
+        const openBatchBtn = document.getElementById('openBatchCreateModal');
+        const closeBatchBtn = document.getElementById('closeBatchCreateModal');
+        const closeBatchBtnFooter = document.getElementById('closeBatchCreateModalFooter');
+        const batchMapBtn = document.getElementById('openBatchMapPicker');
+        const batchMapContainer = document.getElementById('batchMapPickerContainer');
+        let batchMapInstance = null;
+
+        function openBatchModal() {
+            if (batchModal) batchModal.classList.remove('hidden');
+        }
+        function closeBatchModal() {
+            if (batchModal) batchModal.classList.add('hidden');
+        }
+        if (openBatchBtn) openBatchBtn.addEventListener('click', openBatchModal);
+        if (closeBatchBtn) closeBatchBtn.addEventListener('click', closeBatchModal);
+        if (closeBatchBtnFooter) closeBatchBtnFooter.addEventListener('click', closeBatchModal);
+
+        function initBatchMapPicker() {
+            if (batchMapInstance) return;
+            if (!window.ol) return;
+            const view = new ol.View({ center: ol.proj.fromLonLat([0, 0]), zoom: 2 });
+            const raster = new ol.layer.Tile({ source: new ol.source.OSM() });
+            const vectorSource = new ol.source.Vector();
+            const vectorLayer = new ol.layer.Vector({ source: vectorSource });
+            const controls = ol.control.defaults.defaults({ attribution: false });
+            batchMapInstance = new ol.Map({ target: 'batchMapPicker', layers: [raster, vectorLayer], view, controls });
+            batchMapInstance.addControl(new ol.control.Attribution({ collapsible: true, collapsed: true }));
+            batchMapInstance.on('singleclick', function(evt) {
+                const lonlat = ol.proj.toLonLat(evt.coordinate);
+                const lng = lonlat[0].toFixed(6);
+                const lat = lonlat[1].toFixed(6);
+                document.getElementById('batchLat').value = lat;
+                document.getElementById('batchLng').value = lng;
+                vectorSource.clear();
+                vectorSource.addFeature(new ol.Feature({ geometry: new ol.geom.Point(evt.coordinate) }));
+            });
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    const lonLat = [pos.coords.longitude, pos.coords.latitude];
+                    view.setCenter(ol.proj.fromLonLat(lonLat));
+                    view.setZoom(12);
+                });
+            }
+        }
+        if (batchMapBtn) {
+            batchMapBtn.addEventListener('click', function() {
+                if (batchMapContainer) {
+                    const isHidden = batchMapContainer.classList.contains('hidden');
+                    if (isHidden) {
+                        batchMapContainer.classList.remove('hidden');
+                        setTimeout(() => { initBatchMapPicker(); if (batchMapInstance) batchMapInstance.updateSize(); }, 50);
+                    } else {
+                        batchMapContainer.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // Submit batch create
+        const submitBatchBtn = document.getElementById('submitBatchCreate');
+        if (submitBatchBtn) {
+            submitBatchBtn.addEventListener('click', async function() {
+                const countVal = parseInt(document.getElementById('batchDeviceCount').value || '0', 10);
+                if (!countVal || countVal < 1) {
+                    showNotification('{{ __('validation.required', ['attribute' => __('app.devices_count')]) }}', 'error');
+                    return;
+                }
+                const hwSel = Array.from(document.getElementById('batchHwProfiles').selectedOptions).map(o => o.value);
+                const osSel = Array.from(document.getElementById('batchOsImages').selectedOptions).map(o => o.value);
+                const payload = {
+                    count: countVal,
+                    hardware_profile_ids: hwSel,
+                    os_image_ids: osSel,
+                    proxy_list: document.getElementById('batchProxyList').value || '',
+                    proxy_login: document.getElementById('batchProxyLogin').value || null,
+                    proxy_pass: document.getElementById('batchProxyPass').value || null,
+                    gate_url: document.getElementById('batchGateUrl')?.value || null,
+                    latitude: document.getElementById('batchLat').value || null,
+                    longitude: document.getElementById('batchLng').value || null,
+                    max_deviation: document.getElementById('batchMaxDeviation').value || null,
+                };
+
+                try {
+                    const resp = await fetch('{{ route('devices.batchCreate') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showNotification('{{ __('app.devices_created_successfully') }}', 'success');
+                        closeBatchModal();
                         setTimeout(() => { refreshDevices && refreshDevices(); }, 600);
                     } else {
                         showNotification(data.message || 'Error', 'error');
@@ -2175,6 +2476,17 @@
         let currentView = getCookie('deviceViewType') || 'cards'; // Get from cookie or default to cards view
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize tag-style selects using Select2
+            const tagSelects = document.querySelectorAll('select.tag-select');
+            if (tagSelects.length && window.$ && $.fn.select2) {
+                $(tagSelects).select2({
+                    width: '100%',
+                    tags: false,
+                    multiple: true,
+                    dropdownParent: $('#batchCreateModal'),
+                    theme: 'default',
+                });
+            }
             // Initialize user filter options based on selected group without reloading
             (function initUserFilter() {
                 const groupSelect = document.getElementById('groupFilter');
