@@ -1197,13 +1197,12 @@
         // Submit create device (placeholder - depends on backend API to actually create devices in organic DB)
         const submitBtn = document.getElementById('submitCreateDevice');
         if (submitBtn) {
-            submitBtn.addEventListener('click', function() {
+            submitBtn.addEventListener('click', async function() {
                 const proxy = document.getElementById('newDeviceProxy').value.trim();
                 if (!proxy) {
-                    showNotification('{{ __('app.device_proxy') }} is required', 'error');
+                    showNotification('{{ __('validation.required', ['attribute' => __('validation.attributes.proxy')]) }}', 'error');
                     return;
                 }
-                // Collect data (would POST to a create endpoint)
                 const payload = {
                     name: document.getElementById('newDeviceName').value.trim() || null,
                     hardware_profile_id: document.getElementById('newDeviceHw').value || null,
@@ -1216,10 +1215,27 @@
                     longitude: document.getElementById('newDeviceLng').value || null,
                 };
 
-                // TODO: integrate with backend endpoint once available
-                console.log('Create device payload', payload);
-                showNotification('{{ __('app.create') }}: OK (demo)', 'success');
-                closeCreateModal();
+                try {
+                    const resp = await fetch('{{ route('devices.create') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify(payload),
+                    });
+                    const data = await resp.json();
+                    if (data.success) {
+                        showNotification('{{ __('app.create') }}', 'success');
+                        closeCreateModal();
+                        setTimeout(() => { refreshDevices && refreshDevices(); }, 600);
+                    } else {
+                        showNotification(data.message || 'Error', 'error');
+                    }
+                } catch (e) {
+                    showNotification('Request failed', 'error');
+                }
             });
         }
 

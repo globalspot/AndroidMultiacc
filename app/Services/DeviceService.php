@@ -529,8 +529,10 @@ class DeviceService
         $nextDayStatusDate = strtotime('tomorrow 23:59:59');
 
         // Get devices that need status date update
+        // Do not touch freshly created devices explicitly set to 0
         $devicesToUpdate = DB::connection('mysql_second')
             ->table('goProfiles')
+            ->where('statusDate', '>', 0)
             ->where('statusDate', '<', $fiveMinutesAgo)
             ->where('valid', 1)
             ->get();

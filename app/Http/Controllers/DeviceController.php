@@ -730,6 +730,96 @@ class DeviceController extends Controller
     }
 
     /**
+     * Create a new device record in goProfiles (mysql_second)
+     */
+    public function createDevice(Request $request)
+    {
+        $request->validate([
+            'name' => 'nullable|string|max:255',
+            'hardware_profile_id' => 'nullable|string|max:64',
+            'os_image_id' => 'nullable|string|max:64',
+            'proxy' => 'required|string|max:255',
+            'proxy_login' => 'nullable|string|max:255',
+            'proxy_pass' => 'nullable|string|max:255',
+            'gate_url' => 'required|string|max:50',
+            'latitude' => 'nullable|numeric',
+            'longitude' => 'nullable|numeric',
+        ]);
+
+        try {
+            $now = time();
+            // Hardware profile title => devicePlatform
+            $hwTitle = null;
+            if ($request->filled('hardware_profile_id')) {
+                $hw = \App\Models\HardwareProfile::find($request->input('hardware_profile_id'));
+                $hwTitle = $hw?->title;
+            }
+            // If hardware profile not selected, leave platform empty per requirement
+            $platform = $hwTitle ? substr($hwTitle, 0, 250) : '';
+
+            // Default device name: hw title + '.' + 10 random alnum; if no HW selected, leave blank
+            $name = trim((string) $request->input('name', ''));
+            if ($name === '') {
+                if ($hwTitle) {
+                    $name = $hwTitle . '.' . \Illuminate\Support\Str::random(10);
+                } else {
+                    $name = '';
+                }
+            }
+
+            // OS version string
+            // If OS image not selected, deviceOs should be empty
+            $deviceOsValue = '';
+            if ($request->filled('os_image_id')) {
+                $os = \App\Models\OsImage::find($request->input('os_image_id'));
+                if ($os) {
+                    $deviceOsValue = (string) $os->version;
+                }
+            }
+
+            // Proxy
+            $proxyHostPort = substr(trim($request->input('proxy')), 0, 50);
+            $proxyLogin = $request->input('proxy_login') ? substr($request->input('proxy_login'), 0, 100) : null;
+            $proxyPass = $request->input('proxy_pass') ? substr($request->input('proxy_pass'), 0, 100) : null;
+
+            $data = [
+                'createDate' => $now,
+                'deviceName' => substr($name, 0, 100),
+                'devicePlatform' => $platform,
+                'deviceOs' => substr($deviceOsValue, 0, 250),
+                'proxy' => $proxyHostPort,
+                'proxyLogin' => $proxyLogin,
+                'proxyPass' => $proxyPass,
+                // Leave newProxy, deviceAddress, deviceStatus, sessionStatus, updateDate to table defaults
+                'gateUrl' => substr((string) $request->input('gate_url'), 0, 50),
+                // Explicitly set statusDate default to 0
+                'statusDate' => 0,
+            ];
+
+            if ($request->filled('latitude')) {
+                $data['lat'] = substr((string) $request->input('latitude'), 0, 150);
+            }
+            if ($request->filled('longitude')) {
+                $data['lon'] = substr((string) $request->input('longitude'), 0, 150);
+            }
+
+            // Insert to mysql_second.goProfiles
+            $id = \DB::connection('mysql_second')->table('goProfiles')->insertGetId($data);
+
+            return response()->json([
+                'success' => true,
+                'id' => $id,
+                'message' => __('app.create')
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Cancel device assignment (admin and manager only)
      */
     public function cancelAssignment(Request $request, $deviceId)
