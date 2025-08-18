@@ -127,8 +127,10 @@ class User extends Authenticatable
                 ->where('is_active', true)
                 ->get();
         } else {
-            // User sees only directly assigned devices
-            return $this->assignedDevices()->get();
+            // User sees devices assigned directly to them, including owner level
+            return $this->assignedDevices()->orWhere(function($q){
+                $q->where('user_id', $this->id)->where('access_level', 'owner');
+            })->get();
         }
     }
 

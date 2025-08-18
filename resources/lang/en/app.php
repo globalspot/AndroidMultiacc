@@ -241,6 +241,8 @@ return [
     'online' => 'Online',
     'running' => 'Running',
     'failed' => 'Failed',
+    'unknown' => 'Unknown',
+    'offline' => 'Offline',
 
     // Screenshots
     'device_screenshot' => 'Device Screenshot',
@@ -249,6 +251,19 @@ return [
     'device_offline' => 'Device Offline',
     'view_screenshot' => 'View Screenshot',
     'screenshot_loading' => 'Loading Screenshot...',
+
+    // Device Creation Timeline
+    'creating_device' => 'Creating device...',
+    'device_created' => 'Device created',
+    'installing_gapps' => 'Installing gapps...',
+    'opengapps_zip_not_found' => 'OpenGapps zip not found',
+    'zip_file_push_failed' => 'Zip file push failed',
+    'gapps_install_failed' => 'Gapps installation failed',
+    'gapps_install_success' => 'Gapps installation success',
+    'installing_chrome' => 'Installing chrome',
+    'no_chrome_apps_available' => 'No chrome apps available',
+    'chrome_install_failed' => 'Chrome install failed',
+    'chrome_install_success' => 'Chrome install success',
 
     // Custom device names
     'custom_name_saved_successfully' => 'Custom name saved successfully',

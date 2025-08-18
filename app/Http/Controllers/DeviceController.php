@@ -806,6 +806,26 @@ class DeviceController extends Controller
             // Insert to mysql_second.goProfiles
             $id = \DB::connection('mysql_second')->table('goProfiles')->insertGetId($data);
 
+            // Auto-assign the new device to the current user in Laravel DB
+            $user = $request->user();
+            $groupId = null;
+            if ($request->filled('gate_url')) {
+                $groupId = \App\Models\DeviceGroup::where('gate_url', $request->input('gate_url'))
+                    ->value('id');
+            }
+            // Access level 'owner' for creator
+            try {
+                $this->deviceService->assignDeviceToUser((string) $id, $user->id, $groupId, 'owner');
+            } catch (\Throwable $e) {
+                // Swallow assignment errors but report in response
+                // so device creation still succeeds
+                \Log::warning('Auto-assign failed for new device', [
+                    'device_id' => $id,
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'id' => $id,

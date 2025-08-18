@@ -241,6 +241,8 @@ return [
     'online' => 'В сети',
     'running' => 'Работает',
     'failed' => 'Сбой',
+    'unknown' => 'Неизвестно',
+    'offline' => 'Не в сети',
 
     // Screenshots
     'device_screenshot' => 'Скриншот устройства',
@@ -249,6 +251,19 @@ return [
     'device_offline' => 'Устройство не в сети',
     'view_screenshot' => 'Просмотр скриншота',
     'screenshot_loading' => 'Загрузка скриншота...',
+
+    // Device Creation Timeline
+    'creating_device' => 'Создание устройства...',
+    'device_created' => 'Устройство создано',
+    'installing_gapps' => 'Установка gapps...',
+    'opengapps_zip_not_found' => 'Не найден архив OpenGapps',
+    'zip_file_push_failed' => 'Не удалось отправить zip-файл',
+    'gapps_install_failed' => 'Сбой установки Gapps',
+    'gapps_install_success' => 'Gapps установлены',
+    'installing_chrome' => 'Установка Chrome',
+    'no_chrome_apps_available' => 'Нет доступных приложений Chrome',
+    'chrome_install_failed' => 'Сбой установки Chrome',
+    'chrome_install_success' => 'Chrome установлен',
 
     // Custom device names
     'custom_name_saved_successfully' => 'Пользовательское имя сохранено',

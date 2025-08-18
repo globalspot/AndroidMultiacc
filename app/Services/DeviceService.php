@@ -133,6 +133,10 @@ class DeviceService
         // Apply optional assignment-level filters BEFORE device de-duplication
         if ($filterGroupId) {
             $assignments = $assignments->filter(function ($assignment) use ($filterGroupId) {
+                // Always include owner-level assignments regardless of group filter
+                if (($assignment->access_level ?? '') === 'owner') {
+                    return true;
+                }
                 return (string)$assignment->device_group_id === (string)$filterGroupId;
             })->values();
         }
