@@ -93,6 +93,81 @@
         }
     </style>
 
+    <!-- Create Device Modal -->
+    <div id="createDeviceModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl w-full max-w-2xl">
+                <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">{{ __('app.create_device_title') }}</h3>
+                    <button id="closeCreateDeviceModal" class="text-gray-500 hover:text-gray-700">✕</button>
+                </div>
+                <div class="px-6 py-4 space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('app.device_name') }}</label>
+                        <input type="text" id="newDeviceName" placeholder="{{ __('app.leave_blank_to_default') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.hardware_profile') }}</label>
+                            <select id="newDeviceHw" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                                <option value="">{{ __('app.random') }}</option>
+                                @foreach($hardwareProfiles as $hp)
+                                    <option value="{{ $hp->id }}">{{ $hp->title }} ({{ $hp->dimension }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.android_version') }}</label>
+                            <select id="newDeviceOs" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                                <option value="">{{ __('app.random') }}</option>
+                                @foreach($osImages as $os)
+                                    <option value="{{ $os->id }}">{{ $os->android }} (SDK {{ $os->skdVersion }}, {{ $os->arch }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('app.device_proxy') }} <span class="text-red-500">*</span></label>
+                        <input type="text" id="newDeviceProxy" placeholder="host:port" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.proxy_login') }}</label>
+                            <input type="text" id="newDeviceProxyUser" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">{{ __('app.proxy_pass') }}</label>
+                            <input type="password" id="newDeviceProxyPass" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('app.gate_urls_managed') }}</label>
+                        <select id="newDeviceGateUrl" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none">
+                            @foreach($createDeviceGateUrls as $g)
+                                <option value="{{ $g }}">{{ $g }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">{{ __('app.latitude') }} / {{ __('app.longitude') }}</label>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="text" id="newDeviceLat" placeholder="{{ __('app.latitude') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                            <input type="text" id="newDeviceLng" placeholder="{{ __('app.longitude') }}" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none" />
+                            <button id="openMapPicker" type="button" class="mt-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm">{{ __('app.pick_on_map') }}</button>
+                        </div>
+                        <div id="mapPickerContainer" class="mt-3 hidden">
+                            <div id="mapPicker" style="height: 300px;" class="rounded-md border"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-6 py-4 border-t border-gray-200 flex items-center justify-end space-x-3">
+                    <button id="closeCreateDeviceModalFooter" class="px-4 py-2 rounded-md border">{{ __('app.cancel') }}</button>
+                    <button id="submitCreateDevice" class="px-4 py-2 rounded-md bg-indigo-600 text-white">{{ __('app.create') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <!-- Statistics Cards -->
@@ -389,7 +464,7 @@
             <!-- Devices List -->
                 <div class="bg-white overflow-hidden shadow-sm rounded-lg">
                     <div class="px-6 py-4 border-b border-gray-200">
-                        <div class="mb-4">
+                        <div class="mb-4 flex items-center justify-between">
                             <h3 class="text-lg font-medium text-gray-900">
                                 @if($user->isAdmin())
                                     {{ __('app.all_devices') }}
@@ -399,6 +474,9 @@
                                     {{ __('app.devices') }}
                                 @endif
                             </h3>
+                            <button id="openCreateDeviceModal" type="button" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none">
+                                {{ __('app.create_device') }}
+                            </button>
                         </div>
                         <div class="flex flex-col lg:flex-row lg:flex-wrap lg:items-center space-y-3 lg:space-y-0 lg:gap-x-4 lg:gap-y-2 filter-container">
                                 <!-- View Toggle -->
@@ -945,6 +1023,100 @@
 
     @push('scripts')
     <script>
+        // Create Device modal toggle
+        const modal = document.getElementById('createDeviceModal');
+        const openBtn = document.getElementById('openCreateDeviceModal');
+        const closeBtn = document.getElementById('closeCreateDeviceModal');
+        const closeBtnFooter = document.getElementById('closeCreateDeviceModalFooter');
+        const mapBtn = document.getElementById('openMapPicker');
+        const mapContainer = document.getElementById('mapPickerContainer');
+        let mapInstance = null;
+        let mapMarker = null;
+
+        function openCreateModal() {
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+        function closeCreateModal() {
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+        }
+        if (openBtn) openBtn.addEventListener('click', openCreateModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeCreateModal);
+        if (closeBtnFooter) closeBtnFooter.addEventListener('click', closeCreateModal);
+
+        // Map picker (Leaflet). Assumes Leaflet scripts/styles are globally available if used; we lazy-init.
+        function initMapPicker() {
+            if (mapInstance) return;
+            if (!window.L) return; // Leaflet not loaded; skip silently
+            mapInstance = L.map('mapPicker').setView([0, 0], 2);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(mapInstance);
+            mapInstance.on('click', function(e) {
+                const lat = e.latlng.lat.toFixed(6);
+                const lng = e.latlng.lng.toFixed(6);
+                document.getElementById('newDeviceLat').value = lat;
+                document.getElementById('newDeviceLng').value = lng;
+                if (!mapMarker) {
+                    mapMarker = L.marker(e.latlng).addTo(mapInstance);
+                } else {
+                    mapMarker.setLatLng(e.latlng);
+                }
+            });
+            // Try to center to user's location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(pos) {
+                    const coords = [pos.coords.latitude, pos.coords.longitude];
+                    mapInstance.setView(coords, 12);
+                });
+            }
+        }
+        if (mapBtn) {
+            mapBtn.addEventListener('click', function() {
+                if (mapContainer) {
+                    const isHidden = mapContainer.classList.contains('hidden');
+                    if (isHidden) {
+                        mapContainer.classList.remove('hidden');
+                        setTimeout(() => { initMapPicker(); if (mapInstance) mapInstance.invalidateSize(); }, 50);
+                    } else {
+                        mapContainer.classList.add('hidden');
+                    }
+                }
+            });
+        }
+
+        // Submit create device (placeholder - depends on backend API to actually create devices in organic DB)
+        const submitBtn = document.getElementById('submitCreateDevice');
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function() {
+                const proxy = document.getElementById('newDeviceProxy').value.trim();
+                if (!proxy) {
+                    showNotification('{{ __('app.device_proxy') }} is required', 'error');
+                    return;
+                }
+                // Collect data (would POST to a create endpoint)
+                const payload = {
+                    name: document.getElementById('newDeviceName').value.trim() || null,
+                    hardware_profile_id: document.getElementById('newDeviceHw').value || null,
+                    os_image_id: document.getElementById('newDeviceOs').value || null,
+                    proxy: proxy,
+                    proxy_login: document.getElementById('newDeviceProxyUser').value || null,
+                    proxy_pass: document.getElementById('newDeviceProxyPass').value || null,
+                    gate_url: document.getElementById('newDeviceGateUrl')?.value || null,
+                    latitude: document.getElementById('newDeviceLat').value || null,
+                    longitude: document.getElementById('newDeviceLng').value || null,
+                };
+
+                // TODO: integrate with backend endpoint once available
+                console.log('Create device payload', payload);
+                showNotification('{{ __('app.create') }}: OK (demo)', 'success');
+                closeCreateModal();
+            });
+        }
 
         // Start device automation
         function startDevice(deviceId) {

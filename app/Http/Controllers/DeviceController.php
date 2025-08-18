@@ -6,6 +6,8 @@ use App\Models\DeviceAssignment;
 use App\Models\DeviceGroup;
 use App\Models\User;
 use App\Services\DeviceService;
+use App\Models\HardwareProfile;
+use App\Models\OsImage;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
@@ -115,6 +117,23 @@ class DeviceController extends Controller
         $devicesOrderToken = (string) Str::uuid();
         session(["devices_order.$devicesOrderToken" => $devices->pluck('id')->values()->all()]);
 
+        // Data for Create Device modal
+        $hardwareProfiles = HardwareProfile::orderBy('title')->get(['id','title','dimension']);
+        $osImages = OsImage::orderBy('skdVersion')->get(['id','android','version','skdVersion','arch']);
+        // Gate URLs available to current user for creation
+        $createDeviceGateUrls = collect();
+        if ($user->isAdmin()) {
+            $createDeviceGateUrls = $this->deviceService->getAvailableGateUrls();
+        } elseif ($user->isManager()) {
+            $groupIds = $user->managerGroups()->pluck('device_group_id');
+            $createDeviceGateUrls = \App\Models\DeviceGroup::whereIn('id', $groupIds)
+                ->whereNotNull('gate_url')
+                ->pluck('gate_url')
+                ->filter()
+                ->unique()
+                ->values();
+        }
+
         return view('devices.index', [
             'devices' => $devices,
             'statistics' => $statistics,
@@ -128,6 +147,9 @@ class DeviceController extends Controller
             // For completeness; view can still use request('user_id') directly
             'selectedUserId' => $selectedUserId,
             'devicesOrderToken' => $devicesOrderToken,
+            'hardwareProfiles' => $hardwareProfiles,
+            'osImages' => $osImages,
+            'createDeviceGateUrls' => $createDeviceGateUrls,
         ]);
     }
 
