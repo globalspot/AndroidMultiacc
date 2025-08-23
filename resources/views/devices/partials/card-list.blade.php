@@ -2,7 +2,7 @@
     <div class="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow device-card" 
          data-device-id="{{ $device->id }}" 
          data-device-status="{{ $device->deviceStatus }}"
-         data-screen-hash="{{ md5($device->screenView ?? '') }}"
+         data-screen-hash="{{ $device->screenViewHash ?? '' }}"
          data-device-name="{{ strtolower($device->display_name ?? $device->deviceName ?? '') }}"
          data-original-name="{{ $device->deviceName ?? 'Unknown Device' }}"
          data-device-platform="{{ strtolower($device->devicePlatform ?? '') }}"
@@ -14,31 +14,14 @@
             <!-- Screenshot Section - Left Side -->
             <div class="flex-shrink-0">
                 <div class="relative w-40 h-60 bg-gray-200 rounded-lg overflow-hidden screenshot-container">
-                    @if($device->deviceStatus === 'online' && !empty($device->screenView))
-                        <img src="data:image/png;base64,{{ $device->screenView }}" 
-                             alt="{{ __('app.device_screenshot') }}" 
-                             class="w-full h-full object-contain md:object-cover"
-                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                        <div class="absolute inset-0 flex items-center justify-center bg-gray-300" style="display: none;">
-                            <div class="text-center">
-                                <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                </svg>
-                                <p class="mt-1 text-xs text-gray-500">{{ __('app.screenshot_unavailable') }}</p>
-                            </div>
-                        </div>
-                    @else
+                    @if($device->deviceStatus !== 'online')
                         <div class="absolute inset-0 flex items-center justify-center bg-gray-300">
                             <div class="text-center">
                                 <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                 </svg>
                                 <p class="mt-1 text-xs text-gray-500">
-                                    @if($device->deviceStatus === 'online')
-                                        {{ __('app.no_screenshot_available') }}
-                                    @else
-                                        {{ __('app.device_offline') }}
-                                    @endif
+                                    {{ __('app.device_offline') }}
                                 </p>
                             </div>
                         </div>
@@ -143,11 +126,30 @@
                     <div class="text-xs text-gray-500">
                         {{ __('app.device_status') }}: 
                         @php
-                            $statusValue = $device->deviceStatus ?? 'unknown';
+                            $statusValue = isset($device->deviceStatus) ? trim((string)$device->deviceStatus) : '';
                             $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+                            $isBlankStatus = $statusKey === '' || $statusKey === null;
                         @endphp
-                        <span class="device-status font-medium {{ $statusKey === 'running' || $statusKey === 'online' ? 'text-green-600' : ($statusKey === 'starting' ? 'text-blue-600' : 'text-yellow-600') }}">
-                            {{ __('app.' . $statusKey) }}
+                        @php
+                            // Normalize raw backend phrases and app-prefixed localization keys
+                            $statusKey = (strpos($statusKey, 'app.') === 0) ? substr($statusKey, 4) : $statusKey;
+                            $lowerStatus = mb_strtolower($statusKey);
+                            if ($lowerStatus === 'starting device...' || $lowerStatus === 'device starting...' || $lowerStatus === 'starting...') {
+                                $statusKey = 'starting';
+                            } elseif ($lowerStatus === 'creating device...' || $lowerStatus === 'device creating...' || $lowerStatus === 'creating...') {
+                                $statusKey = 'creating';
+                            } elseif ($lowerStatus === 'stopping device...' || $lowerStatus === 'device stopping...' || $lowerStatus === 'stopping...') {
+                                $statusKey = 'stopping';
+                            } else {
+                                $statusKey = $lowerStatus;
+                            }
+                        @endphp
+                        <span class="device-status font-medium {{ $isBlankStatus ? 'text-gray-400' : ($statusKey === 'running' || $statusKey === 'online' ? 'text-green-600' : ($statusKey === 'starting' ? 'text-blue-600' : ($statusKey === 'failed' ? 'text-red-600' : 'text-yellow-600'))) }}">
+                            @if($isBlankStatus)
+                                -
+                            @else
+                                {{ __('app.' . $statusKey) }}
+                            @endif
                         </span>
                     </div>
                 </div>

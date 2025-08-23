@@ -662,6 +662,25 @@
                                         </button>
                                     </div>
                                 </form>
+                                <form class="group-created-limit-form mt-3" data-group-id="{{ $group->id }}">
+                                    <div class="flex space-x-2">
+                                        <input type="number"
+                                            name="created_device_limit"
+                                            value="{{ $group->created_device_limit ?? 0 }}"
+                                            min="0"
+                                            max="10000"
+                                            class="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                            placeholder="{{ __('app.created_device_limit') }}">
+                                        <button type="submit"
+                                            class="bg-indigo-600 text-white px-3 py-1 rounded text-sm hover:bg-indigo-700 transition-colors">
+                                            {{ __('app.update_created_limit') }}
+                                        </button>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        <span class="font-medium">{{ __('app.created_devices') }}:</span> {{ $group->getCreatedDevicesCount() }}
+                                        <span class="ml-2 font-medium">{{ __('app.remaining_created_slots') }}:</span> {{ $group->getRemainingCreatedSlots() }}
+                                    </div>
+                                </form>
                             </div>
                         @endforeach
                     </div>
@@ -842,6 +861,16 @@
                         </div>
                         </div>
                 <div class="p-6">
+                    <div class="text-sm text-gray-700 mb-4">
+                        {{ __('app.total_devices') }}: 
+                        <span id="total-devices-inline">{{ $statistics['total_devices'] }}</span>
+                        @if(isset($selectedGroupId) && $selectedGroupId && isset($statistics['device_limit']))
+                            <span class="ml-2 text-gray-500">
+                                ({{ __('app.limit') }}: {{ $statistics['running_devices'] ?? 0 }}/{{ $statistics['device_limit'] ?? 0 }}; 
+                                {{ __('app.created') }}: {{ $statistics['created_devices'] ?? 0 }}/{{ $statistics['created_device_limit'] ?? 0 }})
+                            </span>
+                        @endif
+                    </div>
                     @if($devices->count() > 0)
                         @php $initialDevices = $devices->slice(0, 20); @endphp
                          <div class="grid grid-cols-1 xl:grid-cols-2 gap-8" id="deviceGrid">
@@ -849,7 +878,7 @@
                                 <div class="bg-gray-50 rounded-lg p-6 border border-gray-200 hover:shadow-md transition-shadow device-card" 
                                      data-device-id="{{ $device->id }}" 
                                      data-device-status="{{ $device->deviceStatus }}"
-                                     data-screen-hash="{{ md5($device->screenView ?? '') }}"
+                                     data-screen-hash="{{ $device->screenViewHash ?? '' }}"
                                      data-device-name="{{ strtolower($device->display_name ?? $device->deviceName ?? '') }}"
                                      data-original-name="{{ $device->deviceName ?? 'Unknown Device' }}"
                                      data-device-platform="{{ strtolower($device->devicePlatform ?? '') }}"
@@ -861,32 +890,13 @@
                                         <!-- Screenshot Section - Left Side -->
                                         <div class="flex-shrink-0">
                                             <div class="relative w-40 h-60 bg-gray-200 rounded-lg overflow-hidden screenshot-container">
-                                                @if($device->deviceStatus === 'online' && !empty($device->screenView))
-                                                    <img src="data:image/png;base64,{{ $device->screenView }}" 
-                                                         alt="{{ __('app.device_screenshot') }}" 
-                                                         class="w-full h-full object-contain md:object-cover"
-                                                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                                                    <div class="absolute inset-0 flex items-center justify-center bg-gray-300" style="display: none;">
-                                                        <div class="text-center">
-                                                            <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                                                            </svg>
-                                                            <p class="mt-1 text-xs text-gray-500">{{ __('app.screenshot_unavailable') }}</p>
-                                                        </div>
-                                                    </div>
-                                                @else
+                                                @if($device->deviceStatus !== 'online')
                                                     <div class="absolute inset-0 flex items-center justify-center bg-gray-300">
                                                         <div class="text-center">
                                                             <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                                                             </svg>
-                                                            <p class="mt-1 text-xs text-gray-500">
-                                                                @if($device->deviceStatus === 'online')
-                                                                    {{ __('app.no_screenshot_available') }}
-                                                                @else
-                                                                    {{ __('app.device_offline') }}
-                                                                @endif
-                                                            </p>
+                                                            <p class="mt-1 text-xs text-gray-500">{{ __('app.device_offline') }}</p>
                                                         </div>
                                                     </div>
                                                 @endif
@@ -989,12 +999,29 @@
                                             <div class="mb-3">
                                                 <div class="text-xs text-gray-500">
                                                     {{ __('app.device_status') }}: 
-                                                    <span class="device-status font-medium {{ $device->deviceStatus === 'running' || $device->deviceStatus === 'online' ? 'text-green-600' : ($device->deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600') }}">
-                                                        @php
-                                                            $statusValue = $device->deviceStatus ?? 'unknown';
-                                                            $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
-                                                        @endphp
-                                                        {{ __('app.' . $statusKey) }}
+                                                    @php
+                                                        $statusValue = isset($device->deviceStatus) ? trim((string)$device->deviceStatus) : '';
+                                                        $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+                                                        $isBlankStatus = $statusKey === '' || $statusKey === null;
+                                                    @endphp
+                                                    <span class="device-status font-medium {{ $isBlankStatus ? 'text-gray-400' : (($statusKey === 'running' || $statusKey === 'online') ? 'text-green-600' : ($statusKey === 'starting' ? 'text-blue-600' : 'text-yellow-600')) }}">
+                                                        @if($isBlankStatus)
+                                                            -
+                                                        @else
+                                                            @php
+                                                                // Normalize raw backend phrases to canonical keys
+                                                                $lowerStatus = mb_strtolower($statusKey);
+                                                                if ($lowerStatus === 'starting device...' || $lowerStatus === 'device starting...' || $lowerStatus === 'starting...') {
+                                                                    $statusKey = 'starting';
+                                                                } elseif ($lowerStatus === 'creating device...' || $lowerStatus === 'device creating...' || $lowerStatus === 'creating...') {
+                                                                    $statusKey = 'creating';
+                                                                } elseif ($lowerStatus === 'stopping device...' || $lowerStatus === 'device stopping...' || $lowerStatus === 'stopping...') {
+                                                                    $statusKey = 'stopping';
+                                                                }
+                                                                $translatedStatus = __('app.' . $statusKey);
+                                                            @endphp
+                                                            {{ $translatedStatus }}
+                                                        @endif
                                                     </span>
                                                 </div>
                                             </div>
@@ -1124,7 +1151,7 @@
                                         <tr class="hover:bg-gray-50 device-table-row" 
                                             data-device-id="{{ $device->id }}" 
                                             data-device-status="{{ $device->deviceStatus }}"
-                                            data-screen-hash="{{ md5($device->screenView ?? '') }}"
+                                            data-screen-hash="{{ $device->screenViewHash ?? '' }}"
                                             data-device-name="{{ strtolower($device->display_name ?? $device->deviceName ?? '') }}"
                                              data-original-name="{{ $device->deviceName ?? 'Unknown Device' }}"
                                             data-device-platform="{{ strtolower($device->devicePlatform ?? '') }}"
@@ -1216,14 +1243,26 @@
                                             <!-- Status -->
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 @php
-                                                    $statusValue = $device->deviceStatus ?? 'offline';
+                                                    $statusValue = isset($device->deviceStatus) ? trim((string)$device->deviceStatus) : '';
                                                     $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+                                                    $isBlankStatus = $statusKey === '' || $statusKey === null;
                                                 @endphp
                                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium device-status
-                                                    @if($statusKey === 'online') bg-green-100 text-green-800
-                                                    @elseif($statusKey === 'starting') bg-yellow-100 text-yellow-800
-                                                    @else bg-red-100 text-red-800 @endif">
-                                                    {{ __('app.' . $statusKey) }}
+                                                    @if($isBlankStatus) bg-gray-100 text-gray-500
+                                                    @elseif($statusKey === 'online') bg-green-100 text-green-800
+                                                    @elseif($statusKey === 'starting') bg-blue-100 text-blue-800
+                                                    @elseif($statusKey === 'failed') bg-red-100 text-red-800
+                                                    @else bg-yellow-100 text-yellow-800 @endif">
+                                                    @if($isBlankStatus)
+                                                        -
+                                                    @else
+                                                        @php
+                                                            $translatedStatus = (strpos($statusKey, '.') !== false)
+                                                                ? __($statusKey)
+                                                                : __('app.' . $statusKey);
+                                                        @endphp
+                                                        {{ $translatedStatus }}
+                                                    @endif
                                                 </span>
                                             </td>
                                             <!-- Create Date -->
@@ -1622,6 +1661,8 @@
                         </div>
                     `;
                 }
+                // Force next refresh to treat screenshot as changed
+                deviceCard.setAttribute('data-screen-hash', '');
             }
 
             // Request screenshot
@@ -1771,6 +1812,45 @@
             });
         });
 
+        // Created device limit management
+        document.querySelectorAll('.group-created-limit-form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+
+                const groupId = this.getAttribute('data-group-id');
+                const limitInput = this.querySelector('input[name="created_device_limit"]');
+                const newLimit = limitInput.value;
+
+                if (newLimit === '' || newLimit < 0 || newLimit > 10000) {
+                    alert('{{ __('app.invalid_limit_value') }}');
+                    return;
+                }
+
+                fetch(`/devices/groups/${groupId}/created-limit`, {
+                    method: 'PUT',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ created_device_limit: parseInt(newLimit) })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('{{ __('app.group_created_limit_updated_successfully') }}');
+                        // Optionally refresh counts
+                        window.location.reload();
+                    } else {
+                        alert(data.message || '{{ __('app.limit_update_failed') }}');
+                    }
+                })
+                .catch(() => {
+                    alert('{{ __('app.limit_update_failed') }}');
+                });
+            });
+        });
+
         // Dynamic device loading based on group selection (only for admin users)
         const assignGroupSelect = document.getElementById('assign_group_id');
         if (assignGroupSelect) {
@@ -1897,6 +1977,10 @@
             if (activeDevicesCounter && statistics.active_devices !== undefined) {
                 activeDevicesCounter.textContent = statistics.active_devices;
             }
+            const totalDevicesInline = document.getElementById('total-devices-inline');
+            if (totalDevicesInline && statistics.total_devices !== undefined) {
+                totalDevicesInline.textContent = statistics.total_devices;
+            }
         }
 
         // Translate device status to current language
@@ -1965,7 +2049,7 @@
                 statusElement.className = `device-status font-medium ${
                     deviceData.deviceStatus === 'running' || deviceData.deviceStatus === 'online' 
                         ? 'text-green-600' 
-                        : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600')
+                        : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : (deviceData.deviceStatus === 'failed' ? 'text-red-600' : 'text-yellow-600'))
                 }`;
             } else {
                 const allElements = deviceCard.querySelectorAll('*');
@@ -1997,7 +2081,7 @@
                         statusElement.className = `device-status font-medium ${
                             deviceData.deviceStatus === 'running' || deviceData.deviceStatus === 'online' 
                                 ? 'text-green-600' 
-                                : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600')
+                                : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : (deviceData.deviceStatus === 'failed' ? 'text-red-600' : 'text-yellow-600'))
                         }`;
                     }
                 }
@@ -2024,7 +2108,7 @@
                     newStatusElement.className = `device-status font-medium ${
                         deviceData.deviceStatus === 'running' || deviceData.deviceStatus === 'online' 
                             ? 'text-green-600' 
-                            : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : 'text-yellow-600')
+                            : (deviceData.deviceStatus === 'starting' ? 'text-blue-600' : (deviceData.deviceStatus === 'failed' ? 'text-red-600' : 'text-yellow-600'))
                     }`;
                 }
             }, 10);
@@ -2084,7 +2168,7 @@
                     statusSpan.className = `px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                         deviceData.deviceStatus === 'running' || deviceData.deviceStatus === 'online' 
                             ? 'bg-green-100 text-green-800' 
-                            : (deviceData.deviceStatus === 'starting' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800')
+                            : (deviceData.deviceStatus === 'starting' ? 'bg-blue-100 text-blue-800' : (deviceData.deviceStatus === 'failed' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'))
                     }`;
                 }
             }
@@ -2170,40 +2254,64 @@
             const screenshotContainer = deviceCard.querySelector('.screenshot-container');
             if (!screenshotContainer) return;
 
-            if (deviceData.deviceStatus === 'online' && deviceData.screenView) {
-                // Show new screenshot
-                screenshotContainer.innerHTML = `
-                    <img src="data:image/png;base64,${deviceData.screenView}" 
-                         alt="{{ __('app.device_screenshot') }}" 
-                          class="w-full h-full object-contain md:object-cover"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="absolute inset-0 flex items-center justify-center bg-gray-300" style="display: none;">
-                        <div class="text-center">
-                            <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                            </svg>
-                            <p class="mt-1 text-xs text-gray-500">{{ __('app.screenshot_unavailable') }}</p>
-                        </div>
-                    </div>
-                `;
-            } else {
-                // Show offline placeholder
+            if (deviceData.deviceStatus !== 'online') {
                 screenshotContainer.innerHTML = `
                     <div class="absolute inset-0 flex items-center justify-center bg-gray-300">
                         <div class="text-center">
                             <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
                             </svg>
-                            <p class="mt-1 text-xs text-gray-500">
-                                ${deviceData.deviceStatus === 'online' 
-                                    ? '{{ __('app.no_screenshot_available') }}' 
-                                    : '{{ __('app.device_offline') }}'
-                                }
-                            </p>
+                            <p class="mt-1 text-xs text-gray-500">{{ __('app.device_offline') }}</p>
                         </div>
                     </div>
                 `;
+                return;
             }
+
+            // Online: fetch on demand
+            fetch(`/devices/${deviceData.id}/screenshot`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.success && data.screenView) {
+                        screenshotContainer.innerHTML = `
+                            <img src="data:image/png;base64,${data.screenView}" 
+                                 alt="{{ __('app.device_screenshot') }}" 
+                                 class="w-full h-full object-contain md:object-cover"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div class="absolute inset-0 flex items-center justify-center bg-gray-300" style="display: none;">
+                                <div class="text-center">
+                                    <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <p class="mt-1 text-xs text-gray-500">{{ __('app.screenshot_unavailable') }}</p>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        screenshotContainer.innerHTML = `
+                            <div class="absolute inset-0 flex items-center justify-center bg-gray-300">
+                                <div class="text-center">
+                                    <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                    <p class="mt-1 text-xs text-gray-500">{{ __('app.no_screenshot_available') }}</p>
+                                </div>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(() => {
+                    screenshotContainer.innerHTML = `
+                        <div class="absolute inset-0 flex items-center justify-center bg-gray-300">
+                            <div class="text-center">
+                                <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                <p class="mt-1 text-xs text-gray-500">{{ __('app.screenshot_unavailable') }}</p>
+                            </div>
+                        </div>
+                    `;
+                });
         }
 
         // Generate control buttons HTML
@@ -2861,6 +2969,14 @@
                 const initialCards = document.querySelectorAll('.device-card');
                 initialCards.forEach(card => {
                     card.setAttribute('data-status-ready', 'true');
+                });
+                // Immediately load screenshots for online devices on initial render
+                const onlineCards = document.querySelectorAll('.device-card[data-device-status="online"]');
+                onlineCards.forEach(card => {
+                    const deviceId = card.getAttribute('data-device-id');
+                    if (deviceId) {
+                        updateDeviceScreenshot(card, { id: deviceId, deviceStatus: 'online' });
+                    }
                 });
                 
                 const initialRows = document.querySelectorAll('.device-table-row');

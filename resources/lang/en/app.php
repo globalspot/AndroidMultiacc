@@ -246,6 +246,8 @@ return [
     'automation_controls' => 'Automation Controls',
     'device_automation' => 'Device Automation',
     'starting' => 'Starting',
+    'stopping' => 'Stopping',
+    'started' => 'Started',
     'creating' => 'Creating',
     'stopped' => 'Stopped',
     'online' => 'Online',
@@ -289,6 +291,7 @@ return [
     'Chrome install success' => 'Chrome install success',
     // Startup/shutdown raw phrases
     'Starting device...' => 'Starting device...',
+    'Stopping device...' => 'Stopping device...',
 
     // Custom device names
     'custom_name_saved_successfully' => 'Custom name saved successfully',
@@ -344,6 +347,14 @@ return [
     'platform' => 'Platform',
     'create_date' => 'Create date',
     'view_device' => 'View',
+
+    // Created devices limit (new)
+    'created_device_limit' => 'Created Devices Limit',
+    'update_created_limit' => 'Update Created Limit',
+    'group_created_limit_updated_successfully' => 'Created devices limit updated successfully',
+    'created_devices' => 'Created Devices',
+    'remaining_created_slots' => 'Remaining Creation Slots',
+    'created_limit_reached' => 'Created device limit reached for this group.',
     'user_group_assignments' => 'User Group Assignments',
     'device_assignment_management' => 'Device Assignment Management',
     'device_assignment' => 'Device Assignment',
@@ -492,4 +503,6 @@ return [
     'assign' => 'Assign',
     'max_free_devices' => 'Max free devices',
     'assigned_successfully' => 'Devices assigned successfully',
+    'limit' => 'Online limit',
+    'created' => 'Created',
 ];

@@ -246,6 +246,8 @@ return [
     'automation_controls' => 'Элементы управления автоматизацией',
     'device_automation' => 'Автоматизация устройства',
     'starting' => 'Запуск',
+    'stopping' => 'Остановка',
+    'started' => 'Запущено',
     'creating' => 'Создание',
     'stopped' => 'Остановлено',
     'online' => 'В сети',
@@ -289,6 +291,7 @@ return [
     'Chrome install success' => 'Chrome установлен',
     // Фразы запуска/остановки в «сыром» виде
     'Starting device...' => 'Запуск устройства...',
+    'Stopping device...' => 'Остановка устройства...',
 
     // Custom device names
     'custom_name_saved_successfully' => 'Пользовательское имя сохранено',
@@ -344,6 +347,16 @@ return [
     'platform' => 'Платформа',
     'create_date' => 'Дата создания',
     'view_device' => 'Просмотр',
+
+    // Created devices limit (new)
+    'created_device_limit' => 'Лимит созданных устройств',
+    'update_created_limit' => 'Обновить лимит созданных',
+    'group_created_limit_updated_successfully' => 'Лимит созданных устройств обновлён',
+    'created_devices' => 'Созданные устройства',
+    'remaining_created_slots' => 'Оставшиеся слоты создания',
+    'created_limit_reached' => 'Достигнут лимит создания устройств для этой группы.',
+    'limit' => 'Лимит онлайн',
+    'created' => 'Создано',
 
     // User Group Assignments
     'user_group_assignments' => 'Назначения пользователей в группы',

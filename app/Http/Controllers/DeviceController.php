@@ -59,15 +59,20 @@ class DeviceController extends Controller
         // Get accessible devices with optional assignment-level filters
         $devices = $this->deviceService->getAccessibleDevicesForUser($user, $selectedGroupId, $selectedUserId);
 
-        // Apply consistent sorting: custom-named devices first, then alphabetically by display name, then by ID
-        // This ensures that devices with custom names (display_name !== deviceName) appear at the top
+        // Apply consistent sorting: online first, then custom-named, then alphabetically by display name, then by ID
+        // Keep in sync with DeviceService::getAccessibleDevicesForUser for session-cached order
         $devices = $devices->sort(function ($a, $b) {
+            $aOnline = (isset($a->deviceStatus) && strtolower((string)$a->deviceStatus) === 'online');
+            $bOnline = (isset($b->deviceStatus) && strtolower((string)$b->deviceStatus) === 'online');
+            if ($aOnline !== $bOnline) {
+                return $aOnline ? -1 : 1; // Online devices first
+            }
+
             // Check if device has custom name (display_name different from deviceName)
             $aHas = !empty($a->display_name) && $a->display_name !== $a->deviceName;
             $bHas = !empty($b->display_name) && $b->display_name !== $b->deviceName;
-            
             if ($aHas !== $bHas) {
-                return $aHas ? -1 : 1; // Custom names first
+                return $aHas ? -1 : 1; // Custom names next
             }
             
             // Then sort alphabetically by display name
@@ -87,8 +92,8 @@ class DeviceController extends Controller
             || $request->query('status') === 'online'
             || (string) $request->query('only_online') === '1';
 
-        // Keep server always returning full set; client-side filters will narrow
-        $statistics = $this->deviceService->getDeviceStatistics($user);
+        // Keep server always returning full set; include group limits for inline counters
+        $statistics = $this->deviceService->getDeviceStatistics($user, $selectedGroupId);
         
         // Get available devices for assignment (admin only)
         $availableDevices = collect();
@@ -390,11 +395,25 @@ class DeviceController extends Controller
             
             $deviceData = [];
             foreach ($devices as $device) {
+                // Normalize backend-provided status phrases to canonical keys
+                $rawStatus = isset($device->deviceStatus) ? trim((string)$device->deviceStatus) : '';
+                if (strpos($rawStatus, 'app.') === 0) {
+                    $rawStatus = substr($rawStatus, 4);
+                }
+                $lower = mb_strtolower($rawStatus);
+                if (in_array($lower, ['starting device...', 'device starting...', 'starting...'], true)) {
+                    $rawStatus = 'starting';
+                } elseif (in_array($lower, ['creating device...', 'device creating...', 'creating...'], true)) {
+                    $rawStatus = 'creating';
+                } elseif (in_array($lower, ['stopping device...', 'device stopping...', 'stopping...'], true)) {
+                    $rawStatus = 'stopping';
+                } else {
+                    $rawStatus = $lower;
+                }
                 $deviceData[] = [
                     'id' => $device->id,
-                    'deviceStatus' => $device->deviceStatus,
-                    'screenView' => $device->screenView,
-                    'screenViewHash' => md5($device->screenView ?? ''),
+                    'deviceStatus' => $rawStatus,
+                    'screenViewHash' => $device->screenViewHash ?? null,
                     'canStart' => $this->deviceService->canStartDevice($device->id),
                     'canStop' => $this->deviceService->canStopDevice($device->id),
                     'access_level' => $device->access_level ?? null,
@@ -430,11 +449,10 @@ class DeviceController extends Controller
             
             $screenshotData = [];
             foreach ($devices as $device) {
-                if ($device->deviceStatus === 'online' && !empty($device->screenView)) {
+                if ($device->deviceStatus === 'online' && !empty($device->screenViewHash)) {
                     $screenshotData[] = [
                         'id' => $device->id,
-                        'screenView' => $device->screenView,
-                        'screenViewHash' => md5($device->screenView ?? ''),
+                        'screenViewHash' => $device->screenViewHash,
                         'deviceStatus' => $device->deviceStatus
                     ];
                 }
@@ -448,6 +466,32 @@ class DeviceController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => __('app.refresh_screenshots_failed')], 500);
         }
+    }
+
+    /**
+     * Get base64 screenshot for a single device
+     */
+    public function getScreenshot(Request $request, $deviceId)
+    {
+        $user = $request->user();
+
+        // Check if user has access to this device
+        $assignment = DeviceAssignment::where('device_id', $deviceId)
+            ->where('user_id', $user->id)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$assignment && !$user->isAdmin()) {
+            abort(403, 'Access denied');
+        }
+
+        $screenView = $this->deviceService->getDeviceScreenshot($deviceId);
+
+        return response()->json([
+            'success' => true,
+            'id' => (string) $deviceId,
+            'screenView' => $screenView,
+        ]);
     }
 
     /**
@@ -747,6 +791,18 @@ class DeviceController extends Controller
         ]);
 
         try {
+            // Enforce created-device limit per group (by gate_url)
+            $group = null;
+            if ($request->filled('gate_url')) {
+                $group = $this->deviceService->getOrCreateGroupByGateUrl((string) $request->input('gate_url'));
+                if ($group && $group->hasReachedCreatedLimit()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => __('app.created_limit_reached')
+                    ], 400);
+                }
+            }
+
             $now = time();
             // Hardware profile title => devicePlatform
             $hwTitle = null;
@@ -794,6 +850,7 @@ class DeviceController extends Controller
                 'gateUrl' => substr((string) $request->input('gate_url'), 0, 50),
                 // Explicitly set statusDate default to 0
                 'statusDate' => 0,
+                'stopAfterCreate' => 1,
             ];
 
             if ($request->filled('latitude')) {
@@ -808,11 +865,7 @@ class DeviceController extends Controller
 
             // Auto-assign the new device to the current user in Laravel DB
             $user = $request->user();
-            $groupId = null;
-            if ($request->filled('gate_url')) {
-                $groupId = \App\Models\DeviceGroup::where('gate_url', $request->input('gate_url'))
-                    ->value('id');
-            }
+            $groupId = $group?->id;
             // Access level 'owner' for creator
             try {
                 $this->deviceService->assignDeviceToUser((string) $id, $user->id, $groupId, 'owner');
@@ -866,7 +919,24 @@ class DeviceController extends Controller
             // Resolve group ID by gate URL for auto-assignment
             $groupId = null;
             if ($request->filled('gate_url')) {
-                $groupId = \App\Models\DeviceGroup::where('gate_url', $request->input('gate_url'))->value('id');
+                $group = $this->deviceService->getOrCreateGroupByGateUrl((string) $request->input('gate_url'));
+                $groupId = $group?->id;
+                if ($group) {
+                    $remainingCreated = $group->getRemainingCreatedSlots();
+                    $requested = (int) $request->input('count');
+                    if ($remainingCreated <= 0) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => __('app.created_limit_reached')
+                        ], 400);
+                    }
+                    if ($requested > $remainingCreated) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => __('app.created_limit_reached')
+                        ], 400);
+                    }
+                }
             }
 
             // Prepare selections
@@ -987,6 +1057,7 @@ class DeviceController extends Controller
                     'proxyPass' => $request->input('proxy_pass') ? substr((string) $request->input('proxy_pass'), 0, 100) : null,
                     'gateUrl' => substr((string) $request->input('gate_url'), 0, 50),
                     'statusDate' => 0,
+                    'stopAfterCreate' => 1,
                 ];
                 if ($lat !== null) {
                     $data['lat'] = substr((string) $lat, 0, 150);
@@ -1068,6 +1139,57 @@ class DeviceController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => __('app.assignment_cancel_failed')
+            ], 500);
+        }
+    }
+
+    /**
+     * Update created device group limit (admin only)
+     */
+    public function updateCreatedGroupLimit(Request $request, $groupId)
+    {
+        $request->validate([
+            'created_device_limit' => 'required|integer|min:0|max:10000',
+        ]);
+
+        try {
+            $this->deviceService->updateCreatedDeviceGroupLimit($groupId, $request->created_device_limit);
+            
+            return response()->json([
+                'success' => true,
+                'message' => __('app.group_created_limit_updated_successfully')
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get both running and created device limits info (admin only)
+     */
+    public function getCreatedGroupLimit(Request $request, $groupId)
+    {
+        try {
+            $limitInfo = $this->deviceService->getDeviceGroupLimitInfo($groupId);
+            
+            if (!$limitInfo) {
+                return response()->json([
+                    'success' => false,
+                    'message' => __('app.group_not_found')
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $limitInfo
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
             ], 500);
         }
     }

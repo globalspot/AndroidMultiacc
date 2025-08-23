@@ -47,20 +47,8 @@
             </li>
             <li>
                 <a href="#" class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 17l4 4 4-4m-4-5v9M3 12a9 9 0 1118 0 9 9 0 01-18 0z"/></svg>
-                    <span class="ml-3">{{ __('app.synchronizer') }}</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
                     <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7h18M3 12h18M3 17h18"/></svg>
                     <span class="ml-3">{{ __('app.api') }}</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A2 2 0 0122 9.553V14.5a2 2 0 01-1.106 1.789L15 18M4 6h8m-8 6h8m-8 6h8"/></svg>
-                    <span class="ml-3">{{ __('app.referral') }}</span>
                 </a>
             </li>
         </ul>

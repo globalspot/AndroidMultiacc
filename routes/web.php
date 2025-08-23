@@ -47,6 +47,7 @@ Route::get('/devices/{deviceId}/status', [App\Http\Controllers\DeviceController:
 // Background refresh routes
 Route::get('/devices/refresh/all', [App\Http\Controllers\DeviceController::class, 'refreshAllDevices'])->name('devices.refresh.all');
 Route::get('/devices/refresh/screenshots', [App\Http\Controllers\DeviceController::class, 'refreshScreenshots'])->name('devices.refresh.screenshots');
+Route::get('/devices/{deviceId}/screenshot', [App\Http\Controllers\DeviceController::class, 'getScreenshot'])->name('devices.getScreenshot');
 
 // Custom device name routes
 Route::post('/devices/{deviceId}/custom-name', [App\Http\Controllers\DeviceController::class, 'updateCustomName'])->name('devices.updateCustomName');
@@ -56,6 +57,9 @@ Route::delete('/devices/{deviceId}/custom-name', [App\Http\Controllers\DeviceCon
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/devices/groups/{groupId}/limit', [App\Http\Controllers\DeviceController::class, 'getGroupLimit'])->name('devices.getGroupLimit');
     Route::put('/devices/groups/{groupId}/limit', [App\Http\Controllers\DeviceController::class, 'updateGroupLimit'])->name('devices.updateGroupLimit');
+    // Created device limit routes
+    Route::get('/devices/groups/{groupId}/created-limit', [App\Http\Controllers\DeviceController::class, 'getCreatedGroupLimit'])->name('devices.getCreatedGroupLimit');
+    Route::put('/devices/groups/{groupId}/created-limit', [App\Http\Controllers\DeviceController::class, 'updateCreatedGroupLimit'])->name('devices.updateCreatedGroupLimit');
     Route::get('/devices/by-gate-url/{gateUrl}', [App\Http\Controllers\DeviceController::class, 'getDevicesByGateUrl'])->name('devices.getByGateUrl');
     
     // User assignment routes (admin only)

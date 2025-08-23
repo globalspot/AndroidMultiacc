@@ -14,6 +14,7 @@ class DeviceGroup extends Model
         'name',
         'description',
         'device_limit',
+        'created_device_limit',
         'gate_url',
     ];
 
@@ -73,6 +74,37 @@ class DeviceGroup extends Model
     public function getRemainingSlots()
     {
         return max(0, $this->device_limit - $this->getRunningDevicesCount());
+    }
+
+    /**
+     * Get count of devices created under this group's gate
+     */
+    public function getCreatedDevicesCount(): int
+    {
+        if (!$this->gate_url) {
+            return 0;
+        }
+        return (int) \DB::connection('mysql_second')
+            ->table('goProfiles')
+            ->where('gateUrl', $this->gate_url)
+            ->where('valid', 1)
+            ->count();
+    }
+
+    /**
+     * Check if group has reached created devices limit
+     */
+    public function hasReachedCreatedLimit(): bool
+    {
+        return $this->getCreatedDevicesCount() >= (int) ($this->created_device_limit ?? 0);
+    }
+
+    /**
+     * Get remaining created device slots
+     */
+    public function getRemainingCreatedSlots(): int
+    {
+        return max(0, ((int) ($this->created_device_limit ?? 0)) - $this->getCreatedDevicesCount());
     }
 
     /**

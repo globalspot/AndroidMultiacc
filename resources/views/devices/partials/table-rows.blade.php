@@ -2,7 +2,7 @@
 <tr class="hover:bg-gray-50 device-table-row" 
     data-device-id="{{ $device->id }}" 
     data-device-status="{{ $device->deviceStatus }}"
-    data-screen-hash="{{ md5($device->screenView ?? '') }}"
+    data-screen-hash="{{ $device->screenViewHash ?? '' }}"
     data-device-name="{{ strtolower($device->display_name ?? $device->deviceName ?? '') }}"
     data-original-name="{{ $device->deviceName ?? 'Unknown Device' }}"
     data-device-platform="{{ strtolower($device->devicePlatform ?? '') }}"
@@ -93,14 +93,35 @@
     <!-- Status -->
     <td class="px-6 py-4 whitespace-nowrap">
         @php
-            $statusValue = $device->deviceStatus ?? 'offline';
+            $statusValue = isset($device->deviceStatus) ? trim((string)$device->deviceStatus) : '';
             $statusKey = (strpos($statusValue, 'app.') === 0) ? substr($statusValue, 4) : $statusValue;
+            $isBlankStatus = $statusKey === '' || $statusKey === null;
+        @endphp
+        @php
+            // Normalize raw backend phrases and app-prefixed localization keys
+            $statusKey = (strpos($statusKey, 'app.') === 0) ? substr($statusKey, 4) : $statusKey;
+            $lowerStatus = mb_strtolower($statusKey);
+            if ($lowerStatus === 'starting device...' || $lowerStatus === 'device starting...' || $lowerStatus === 'starting...') {
+                $statusKey = 'starting';
+            } elseif ($lowerStatus === 'creating device...' || $lowerStatus === 'device creating...' || $lowerStatus === 'creating...') {
+                $statusKey = 'creating';
+            } elseif ($lowerStatus === 'stopping device...' || $lowerStatus === 'device stopping...' || $lowerStatus === 'stopping...') {
+                $statusKey = 'stopping';
+            } else {
+                $statusKey = $lowerStatus;
+            }
         @endphp
         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium device-status
-            @if($statusKey === 'online') bg-green-100 text-green-800
-            @elseif($statusKey === 'starting') bg-yellow-100 text-yellow-800
-            @else bg-red-100 text-red-800 @endif">
-            {{ __('app.' . $statusKey) }}
+            @if($isBlankStatus) bg-gray-100 text-gray-500
+            @elseif($statusKey === 'online') bg-green-100 text-green-800
+            @elseif($statusKey === 'starting') bg-blue-100 text-blue-800
+            @elseif($statusKey === 'failed') bg-red-100 text-red-800
+            @else bg-yellow-100 text-yellow-800 @endif">
+            @if($isBlankStatus)
+                -
+            @else
+                {{ __('app.' . $statusKey) }}
+            @endif
         </span>
     </td>
 

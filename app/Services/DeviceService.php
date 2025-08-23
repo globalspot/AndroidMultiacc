@@ -51,7 +51,7 @@ class DeviceService
     {
         return DB::connection('mysql_second')
             ->table('goProfiles')
-            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', 'screenView', 'deviceAddress', 'valid', 'createDate', 'updateDate')
+            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', DB::raw('MD5(screenView) as screenViewHash'), 'deviceAddress', 'valid', 'createDate', 'updateDate')
             ->where('valid', 1)
             ->get();
     }
@@ -80,7 +80,7 @@ class DeviceService
         $rows = DB::connection('mysql_second')
             ->table('goProfiles')
             ->whereIn('id', $deviceIds)
-            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', 'screenView', 'deviceAddress', 'valid', 'createDate', 'updateDate', 'gateUrl')
+            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', DB::raw('MD5(screenView) as screenViewHash'), 'deviceAddress', 'valid', 'createDate', 'updateDate', 'gateUrl')
             ->get();
 
         // Index by id for quick lookup
@@ -164,27 +164,41 @@ class DeviceService
             }
         }
 
+        // Fetch all needed device rows in one query to avoid N+1 and large payloads
+        $deviceIds = $assignments->pluck('device_id')->map(function ($id) { return (string) $id; });
+        $deviceRows = collect();
+        if ($deviceIds->isNotEmpty()) {
+            $deviceRows = DB::connection('mysql_second')
+                ->table('goProfiles')
+                ->whereIn('id', $deviceIds)
+                ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', DB::raw('MD5(screenView) as screenViewHash'), 'deviceAddress', 'valid', 'createDate', 'updateDate', 'gateUrl')
+                ->get()
+                ->keyBy(function ($r) { return (string) $r->id; });
+        }
+
         foreach ($assignments as $assignment) {
-            $deviceInfo = $this->getDeviceById($assignment->device_id);
-            if ($deviceInfo) {
-                $deviceInfo->assignment = $assignment;
-                $deviceInfo->access_level = $assignment->access_level;
-                $deviceInfo->group = $assignment->deviceGroup;
-                
-                // Add custom name if exists
-                if ($user->isAdmin() || $user->isManager()) {
-                    $customName = $globalCustomNames[(string) $deviceInfo->id] ?? null;
-                } else {
-                    $customName = $user->getCustomDeviceName($deviceInfo->id);
-                }
-                $deviceInfo->display_name = $customName ?: $deviceInfo->deviceName;
-                $deviceInfo->has_custom_name = !empty($customName);
-                
-                // Extract port number from deviceAddress
-                $deviceInfo->port_number = $this->extractPortFromAddress($deviceInfo->deviceAddress ?? '');
-                
-                $devices->push($deviceInfo);
+            $deviceInfo = $deviceRows->get((string) $assignment->device_id);
+            if (!$deviceInfo) { continue; }
+
+            // Decorate with assignment info
+            $deviceInfo = clone $deviceInfo; // avoid mutating shared reference
+            $deviceInfo->assignment = $assignment;
+            $deviceInfo->access_level = $assignment->access_level;
+            $deviceInfo->group = $assignment->deviceGroup;
+
+            // Custom name
+            if ($user->isAdmin() || $user->isManager()) {
+                $customName = $globalCustomNames[(string) $deviceInfo->id] ?? null;
+            } else {
+                $customName = $user->getCustomDeviceName($deviceInfo->id);
             }
+            $deviceInfo->display_name = $customName ?: $deviceInfo->deviceName;
+            $deviceInfo->has_custom_name = !empty($customName);
+
+            // Port number
+            $deviceInfo->port_number = $this->extractPortFromAddress($deviceInfo->deviceAddress ?? '');
+
+            $devices->push($deviceInfo);
         }
         
         // For admin/manager views, the same device can be assigned to multiple users/groups.
@@ -193,13 +207,20 @@ class DeviceService
             $devices = $devices->unique('id')->values();
         }
         
-        // Sort devices: custom-named first, then alphabetically by display name, then by id
+        // Sort devices: online first, then custom-named, then alphabetically by display name, then by id
         $devices = $devices->sort(function ($a, $b) {
+            $aOnline = (isset($a->deviceStatus) && strtolower((string)$a->deviceStatus) === 'online');
+            $bOnline = (isset($b->deviceStatus) && strtolower((string)$b->deviceStatus) === 'online');
+            if ($aOnline !== $bOnline) {
+                return $aOnline ? -1 : 1; // Online devices first
+            }
+
             $aHas = !empty($a->has_custom_name);
             $bHas = !empty($b->has_custom_name);
             if ($aHas !== $bHas) {
-                return $aHas ? -1 : 1;
+                return $aHas ? -1 : 1; // Custom names next
             }
+
             $aName = strtolower($a->display_name ?? $a->deviceName ?? '');
             $bName = strtolower($b->display_name ?? $b->deviceName ?? '');
             if ($aName !== $bName) {
@@ -258,16 +279,30 @@ class DeviceService
     /**
      * Get device statistics
      */
-    public function getDeviceStatistics(User $user)
+    public function getDeviceStatistics(User $user, $groupId = null)
     {
         $accessibleDevices = $this->getAccessibleDevicesForUser($user);
-        
-        return [
+
+        $stats = [
             'total_devices' => $accessibleDevices->count(),
             'active_devices' => $accessibleDevices->where('deviceStatus', 'online')->count(),
             'groups_count' => $user->isAdmin() ? DeviceGroup::count() : $user->managedGroups()->count(),
             'users_count' => $user->isAdmin() ? User::count() : 0,
         ];
+
+        if ($groupId) {
+            $group = DeviceGroup::find($groupId);
+            if ($group) {
+                $stats['device_limit'] = (int) ($group->device_limit ?? 0);
+                $stats['running_devices'] = $group->getRunningDevicesCount();
+                $stats['remaining_slots'] = $group->getRemainingSlots();
+                $stats['created_device_limit'] = (int) ($group->created_device_limit ?? 0);
+                $stats['created_devices'] = $group->getCreatedDevicesCount();
+                $stats['remaining_created_slots'] = $group->getRemainingCreatedSlots();
+            }
+        }
+
+        return $stats;
     }
 
     /**
@@ -281,7 +316,7 @@ class DeviceService
             ->orWhere('devicePlatform', 'like', "%{$query}%")
             ->orWhere('deviceOs', 'like', "%{$query}%")
             ->where('valid', 1)
-            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', 'screenView', 'deviceAddress', 'valid', 'createDate', 'updateDate')
+            ->select('id', 'deviceName', 'devicePlatform', 'deviceOs', 'deviceStatus', DB::raw('MD5(screenView) as screenViewHash'), 'deviceAddress', 'valid', 'createDate', 'updateDate')
             ->get();
     }
 
@@ -326,7 +361,7 @@ class DeviceService
                 'devicePlatform' => $device->devicePlatform,
                 'deviceOs' => $device->deviceOs,
                 'deviceStatus' => $device->deviceStatus,
-                'screenView' => $device->screenView,
+                'screenViewHash' => $device->screenViewHash ?? null,
                 'deviceAddress' => $device->deviceAddress,
                 'valid' => $device->valid ?? 1,
                 'createDate' => $device->createDate ?? null,
@@ -474,10 +509,38 @@ class DeviceService
             'id' => $group->id,
             'name' => $group->name,
             'device_limit' => $group->device_limit,
+            'created_device_limit' => (int) ($group->created_device_limit ?? 0),
             'running_devices' => $group->getRunningDevicesCount(),
             'remaining_slots' => $group->getRemainingSlots(),
             'has_reached_limit' => $group->hasReachedLimit(),
+            'created_devices' => $group->getCreatedDevicesCount(),
+            'remaining_created_slots' => $group->getRemainingCreatedSlots(),
+            'has_reached_created_limit' => $group->hasReachedCreatedLimit(),
         ];
+    }
+
+    /**
+     * Update created device limit for a group (admin-only via controller)
+     */
+    public function updateCreatedDeviceGroupLimit($groupId, $newLimit)
+    {
+        $group = DeviceGroup::find($groupId);
+        if (!$group) {
+            throw new \Exception('Device group not found.');
+        }
+
+        if ($newLimit < 0) {
+            throw new \Exception('Created device limit cannot be negative.');
+        }
+
+        // Prevent setting limit below already created devices
+        $createdCount = $group->getCreatedDevicesCount();
+        if ($newLimit < $createdCount) {
+            throw new \Exception("Cannot set created-device limit below already created devices ({$createdCount}).");
+        }
+
+        $group->created_device_limit = (int) $newLimit;
+        return $group->save();
     }
 
     /**
@@ -493,6 +556,29 @@ class DeviceService
             ->pluck('gateUrl')
             ->filter()
             ->values();
+    }
+
+    /**
+     * Resolve or create a DeviceGroup by gate URL
+     */
+    public function getOrCreateGroupByGateUrl(string $gateUrl): ?DeviceGroup
+    {
+        $gateUrl = trim($gateUrl);
+        if ($gateUrl === '') {
+            return null;
+        }
+
+        $group = DeviceGroup::where('gate_url', $gateUrl)->first();
+        if ($group) {
+            return $group;
+        }
+
+        // Create a minimal group using gateUrl as name if none exists
+        return DeviceGroup::create([
+            'name' => substr($gateUrl, 0, 255),
+            'description' => null,
+            'gate_url' => $gateUrl,
+        ]);
     }
 
     /**
@@ -532,28 +618,19 @@ class DeviceService
         $fiveMinutesAgo = $currentTime - (5 * 60);
         $nextDayStatusDate = strtotime('tomorrow 23:59:59');
 
-        // Get devices that need status date update
-        // Do not touch freshly created devices explicitly set to 0
-        $devicesToUpdate = DB::connection('mysql_second')
+        // Bulk update in a single query to reduce memory usage
+        $updatedCount = DB::connection('mysql_second')
             ->table('goProfiles')
             ->where('statusDate', '>', 0)
             ->where('statusDate', '<', $fiveMinutesAgo)
+            ->where('deviceStatus', 'online')
             ->where('valid', 1)
-            ->get();
+            ->update([
+                'statusDate' => $nextDayStatusDate,
+                'updateDate' => $currentTime,
+            ]);
 
-        $updatedCount = 0;
-        foreach ($devicesToUpdate as $device) {
-            DB::connection('mysql_second')
-                ->table('goProfiles')
-                ->where('id', $device->id)
-                ->update([
-                    'statusDate' => $nextDayStatusDate,
-                    'updateDate' => $currentTime,
-                ]);
-            $updatedCount++;
-        }
-
-        return $updatedCount;
+        return (int) $updatedCount;
     }
 
     /**
@@ -572,5 +649,19 @@ class DeviceService
         }
 
         return null;
+    }
+
+    /**
+     * Get raw screenshot (base64) for a single device
+     */
+    public function getDeviceScreenshot($deviceId)
+    {
+        $row = DB::connection('mysql_second')
+            ->table('goProfiles')
+            ->where('id', $deviceId)
+            ->select('screenView')
+            ->first();
+
+        return $row ? ($row->screenView ?? null) : null;
     }
 }
