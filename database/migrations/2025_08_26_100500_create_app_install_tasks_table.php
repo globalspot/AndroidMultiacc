@@ -21,6 +21,7 @@ return new class extends Migration
             // Note: spelling per request
             $table->dateTime('comlete_date')->nullable();
             $table->string('install_status', 64)->default('queued');
+            $table->json('permissions')->nullable();
 
             $table->index('device_id');
             $table->index('install_status');

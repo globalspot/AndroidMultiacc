@@ -22,6 +22,7 @@
                                         'url' => $first->url ?? null,
                                         'lib_url' => $first->lib_url ?? null,
                                         'install_order' => $first->lib_install_order ?? null,
+                                        'version' => $first->version ?? null,
                                     ]);
                                     $hasVersion = $sorted->contains(function($e){ return !empty($e->version); });
                                 @endphp
@@ -39,7 +40,8 @@
                                                                 data-filename="{{ $entry->filename }}"
                                                                 data-url="{{ $entry->url }}"
                                                                 data-lib-url="{{ $entry->lib_url }}"
-                                                                data-install-order="{{ $entry->lib_install_order }}">
+                                                                data-install-order="{{ $entry->lib_install_order }}"
+                                                                data-version="{{ $entry->version }}">
                                                                 {{ $entry->version ?? $entry->filename }}
                                                             </option>
                                                         @endforeach
@@ -64,7 +66,10 @@
                 <div class="fixed inset-0 bg-gray-900 opacity-50" @click="closeModal()"></div>
                 <div class="bg-white rounded-lg shadow-xl w-full max-w-3xl relative z-10 max-h-[90vh] flex flex-col">
                     <div class="px-6 py-4 border-b shrink-0">
-                        <h3 class="text-lg font-semibold text-gray-900">{{ __('app.select_devices_title') }} <span class="text-gray-500" x-text="currentAppTitle"></span></h3>
+                        <h3 class="text-lg font-semibold text-gray-900">{{ __('app.select_devices_title') }}
+                            <span class="text-gray-700" x-text="currentAppTitle"></span>
+                            <span class="text-gray-500" x-show="currentVersionLabel" x-text="' (' + currentVersionLabel + ')'"></span>
+                        </h3>
                     </div>
                     <div class="p-6 flex-1 overflow-hidden flex flex-col">
                         <div class="flex items-center justify-between mb-3 shrink-0">
@@ -74,7 +79,36 @@
                                 <button class="px-3 py-1 text-sm bg-gray-100 rounded" @click="unselectAll()">{{ __('app.unselect_all') }}</button>
                             </div>
                         </div>
-                        <div class="border rounded overflow-hidden flex-1 overflow-y-auto">
+                        <!-- Permissions dropdown -->
+                        <div class="mb-3 shrink-0">
+                            <label class="block text-sm text-gray-600 mb-1">{{ __('app.required_permissions') }}</label>
+                            <div class="relative">
+                                <button type="button" class="w-full border rounded-md px-3 py-2 text-left" @click="openPerms = !openPerms">
+                                    <span x-text="selectedPermissions.length ? selectedPermissions.join(', ') : '{{ __('app.none') }}'"></span>
+                                </button>
+                                <div class="mt-1 w-full bg-white border rounded-md shadow max-h-[50vh] overflow-y-auto overscroll-contain" x-show="openPerms" x-cloak @click.outside="openPerms = false">
+                                    <div class="p-2 border-b sticky top-0 bg-white z-10">
+                                        <input type="text" class="w-full border-gray-300 rounded-md" placeholder="{{ __('app.search') }}" x-model="permQuery">
+                                    </div>
+                                    <ul class="divide-y">
+                                        <template x-for="perm in filteredPerms()" :key="perm.name">
+                                            <li class="px-3 py-2 hover:bg-gray-50 flex items-start justify-between cursor-pointer" @click="togglePermission(perm.name)">
+                                                <div class="flex items-start space-x-2">
+                                                    <input type="checkbox" class="mt-1" :checked="selectedPermissions.includes(perm.name)" @click.stop @change="togglePermission(perm.name)">
+                                                    <div>
+                                                        <div class="text-sm font-medium" x-text="perm.name"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="ml-2 text-gray-400" title="{{ __('app.more_info') }}" @click.stop @mouseenter="hoverDesc = perm.description" @mouseleave="hoverDesc = ''">?</div>
+                                            </li>
+                                        </template>
+                                        <li class="p-3 text-sm text-gray-500" x-show="filteredPerms().length === 0">{{ __('app.no_data') }}</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mt-1 text-xs text-gray-500" x-show="hoverDesc" x-text="hoverDesc"></div>
+                        </div>
+                        <div class="border rounded overflow-hidden flex-1 overflow-y-auto pb-24">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
@@ -102,7 +136,7 @@
                             </table>
                         </div>
                     </div>
-                    <div class="px-6 py-4 border-t flex items-center justify-end space-x-3 shrink-0">
+                    <div class="px-6 py-4 border-t flex items-center justify-end space-x-3 shrink-0 sticky bottom-0 bg-white">
                         <button class="px-4 py-2 bg-gray-100 rounded" @click="closeModal()">{{ __('app.cancel') }}</button>
                         <button class="px-4 py-2 bg-blue-600 text-white rounded" :disabled="selectedDeviceIds.size === 0" @click="confirmInstall()">{{ __('app.confirm_install') }}</button>
                     </div>
@@ -116,11 +150,48 @@
             return {
                 showModal: false,
                 currentAppTitle: '',
+                currentVersionLabel: '',
                 selectedVersionByApp: {}, // appName -> {filename,url,lib_url,install_order}
                 devices: [],
                 filteredDevices: [],
                 selectedDeviceIds: new Set(),
                 search: '',
+                // Permissions UI state
+                openPerms: false,
+                permQuery: '',
+                hoverDesc: '',
+                selectedPermissions: [],
+                allPermissions: [
+                    // Actual, commonly used runtime permissions subset (full list is large)
+                    { name: 'android.permission.ACCESS_COARSE_LOCATION', description: 'Approximate device location.' },
+                    { name: 'android.permission.ACCESS_FINE_LOCATION', description: 'Precise device location.' },
+                    { name: 'android.permission.ACTIVITY_RECOGNITION', description: 'Physical activity recognition.' },
+                    { name: 'android.permission.BLUETOOTH_CONNECT', description: 'Connect to paired Bluetooth devices.' },
+                    { name: 'android.permission.BLUETOOTH_SCAN', description: 'Scan for Bluetooth devices.' },
+                    { name: 'android.permission.CAMERA', description: 'Access camera device.' },
+                    { name: 'android.permission.POST_NOTIFICATIONS', description: 'Post notifications.' },
+                    { name: 'android.permission.READ_CALENDAR', description: 'Read user calendar data.' },
+                    { name: 'android.permission.WRITE_CALENDAR', description: 'Write user calendar data.' },
+                    { name: 'android.permission.READ_CONTACTS', description: 'Read contacts.' },
+                    { name: 'android.permission.WRITE_CONTACTS', description: 'Write contacts.' },
+                    { name: 'android.permission.RECORD_AUDIO', description: 'Record audio.' },
+                    { name: 'android.permission.READ_MEDIA_IMAGES', description: 'Read media images.' },
+                    { name: 'android.permission.READ_MEDIA_VIDEO', description: 'Read media video.' },
+                    { name: 'android.permission.READ_MEDIA_AUDIO', description: 'Read media audio.' },
+                    { name: 'android.permission.READ_MEDIA_VISUAL_USER_SELECTED', description: 'Access user selected media.' },
+                    { name: 'android.permission.READ_PHONE_NUMBERS', description: 'Read phone numbers.' },
+                    { name: 'android.permission.READ_PHONE_STATE', description: 'Read phone state.' },
+                    { name: 'android.permission.CALL_PHONE', description: 'Directly call phone numbers.' },
+                    { name: 'android.permission.SEND_SMS', description: 'Send SMS messages.' },
+                    { name: 'android.permission.READ_SMS', description: 'Read SMS messages.' },
+                    { name: 'android.permission.RECEIVE_SMS', description: 'Receive SMS messages.' },
+                    { name: 'android.permission.NEARBY_WIFI_DEVICES', description: 'Discover nearby Wi‑Fi devices.' },
+                    { name: 'android.permission.BODY_SENSORS', description: 'Access body sensors.' },
+                    { name: 'android.permission.UWB_RANGING', description: 'Ultra‑wideband ranging.' },
+                    { name: 'android.permission.USE_FULL_SCREEN_INTENT', description: 'Use full screen notification intents.' },
+                    { name: 'android.permission.VIBRATE', description: 'Control vibrator.' },
+                    { name: 'android.permission.WAKE_LOCK', description: 'Prevent device from sleeping.' }
+                ],
                 openModal(appName, defaultVer) {
                     this.currentAppTitle = appName;
                     this.showModal = true;
@@ -128,6 +199,9 @@
                     if (defaultVer && !this.selectedVersionByApp[appName]) {
                         this.selectedVersionByApp[appName] = defaultVer;
                     }
+                    // Set header version label from default or existing selection
+                    const verObj = this.selectedVersionByApp[appName];
+                    this.currentVersionLabel = verObj ? (verObj.version || verObj.filename || '') : '';
                     if (this.devices.length === 0) {
                         fetch("{{ route('apps.devices') }}")
                             .then(r => r.json())
@@ -141,6 +215,15 @@
                         this.filteredDevices = this.filterList(this.search);
                     }
                 },
+                filteredPerms() {
+                    const q = this.permQuery.toLowerCase().trim();
+                    if (!q) return this.allPermissions;
+                    return this.allPermissions.filter(p => p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
+                },
+                togglePermission(name) {
+                    const i = this.selectedPermissions.indexOf(name);
+                    if (i >= 0) this.selectedPermissions.splice(i, 1); else this.selectedPermissions.push(name);
+                },
                 closeModal() {
                     this.showModal = false;
                 },
@@ -152,7 +235,9 @@
                         url: opt.dataset.url,
                         lib_url: opt.dataset.libUrl || null,
                         install_order: opt.dataset.installOrder || null,
+                        version: opt.dataset.version || null,
                     };
+                    this.currentVersionLabel = (opt.dataset.version || opt.dataset.filename || '');
                 },
                 filterList(q) {
                     const query = (q || '').toLowerCase();
@@ -190,6 +275,7 @@
                         app_url: ver?.url || '',
                         lib_url: ver?.lib_url || null,
                         install_order: ver?.install_order || null,
+                        permissions: this.selectedPermissions,
                     };
                     fetch("{{ route('apps.tasks.create') }}", {
                         method: 'POST',

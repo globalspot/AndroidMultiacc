@@ -23,6 +23,11 @@ class AppInstallTask extends Model
         'update_date',
         'comlete_date',
         'install_status',
+        'permissions',
+    ];
+
+    protected $casts = [
+        'permissions' => 'array',
     ];
 }
 

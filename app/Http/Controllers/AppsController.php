@@ -67,9 +67,18 @@ class AppsController extends Controller
             'app_url' => ['required', 'url'],
             'lib_url' => ['nullable', 'url'],
             'install_order' => ['nullable', 'in:before,after'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string'],
         ]);
 
         $now = now();
+        // Normalize permissions to JSON string for query builder insert
+        $permsArray = $data['permissions'] ?? [];
+        if (!is_array($permsArray)) {
+            $permsArray = [];
+        }
+        $permsArray = array_values(array_unique(array_filter($permsArray, function ($p) { return is_string($p) && $p !== ''; })));
+        $permissionsJson = !empty($permsArray) ? json_encode($permsArray) : null;
         $tasks = [];
         foreach ($data['device_ids'] as $deviceId) {
             $tasks[] = [
@@ -83,6 +92,7 @@ class AppsController extends Controller
                 'update_date' => null,
                 'comlete_date' => null,
                 'install_status' => 'queued',
+                'permissions' => $permissionsJson,
             ];
         }
 

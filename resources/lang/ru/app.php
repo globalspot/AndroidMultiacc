@@ -159,6 +159,8 @@ return [
     'select_all' => 'Выбрать все',
     'unselect_all' => 'Снять выделение',
     'confirm_install' => 'Подтвердить',
+    'required_permissions' => 'Требуемые разрешения',
+    'more_info' => 'Подробнее',
 
     // Footer
     'all_rights_reserved' => 'Все права защищены.',

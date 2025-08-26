@@ -159,6 +159,8 @@ return [
     'select_all' => 'Select all',
     'unselect_all' => 'Unselect all',
     'confirm_install' => 'Confirm',
+    'required_permissions' => 'Required permissions',
+    'more_info' => 'More info',
 
     // APK Management
     'apk_management' => 'APK Management',
