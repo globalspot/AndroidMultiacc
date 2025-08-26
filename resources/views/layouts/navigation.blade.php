@@ -28,8 +28,8 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
-                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c1.657 0 3-.895 3-2s-1.343-2-3-2-3 .895-3 2 1.343 2 3 2zm0 0v12m-7-6a7 7 0 1114 0 7 7 0 01-14 0z"/></svg>
+                <a href="{{ route('apps.index') }}" class="flex items-center px-3 py-2 rounded-md {{ request()->routeIs('apps.*') ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <svg class="h-5 w-5 {{ request()->routeIs('apps.*') ? 'text-blue-600' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c1.657 0 3-.895 3-2s-1.343-2-3-2-3 .895-3 2 1.343 2 3 2zm0 0v12m-7-6a7 7 0 1114 0 7 7 0 01-14 0z"/></svg>
                     <span class="ml-3">{{ __('app.applications') }}</span>
                 </a>
             </li>

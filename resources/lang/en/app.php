@@ -153,6 +153,12 @@ return [
     'user_administration' => 'User Administration',
     'assign_manager_to_users' => 'Assign Manager to Users',
     'app_edit' => 'App Edit',
+    'install_apps' => 'Install Applications',
+    'select_version' => 'Select version',
+    'select_devices_title' => 'Select devices for',
+    'select_all' => 'Select all',
+    'unselect_all' => 'Unselect all',
+    'confirm_install' => 'Confirm',
 
     // APK Management
     'apk_management' => 'APK Management',

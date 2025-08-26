@@ -98,6 +98,11 @@ Route::get('/invites/{token}', [App\Http\Controllers\GroupInviteController::clas
 
 // Screenshot request route (available to all authenticated users)
 Route::post('/devices/{deviceId}/request-screenshot', [App\Http\Controllers\DeviceController::class, 'requestScreenshot'])->name('devices.requestScreenshot');
+
+    // Apps install tasks
+    Route::get('/apps', [App\Http\Controllers\AppsController::class, 'index'])->name('apps.index');
+    Route::get('/apps/devices', [App\Http\Controllers\AppsController::class, 'devices'])->name('apps.devices');
+    Route::post('/apps/tasks', [App\Http\Controllers\AppsController::class, 'createTasks'])->name('apps.tasks.create');
 });
 
 // Language switching route

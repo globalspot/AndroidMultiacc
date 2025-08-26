@@ -153,6 +153,12 @@ return [
     'user_administration' => 'Управление пользователями',
     'assign_manager_to_users' => 'Назначение менеджера пользователям',
     'app_edit' => 'Редактор приложений',
+    'install_apps' => 'Установка приложений',
+    'select_version' => 'Выберите версию',
+    'select_devices_title' => 'Выберите устройства для',
+    'select_all' => 'Выбрать все',
+    'unselect_all' => 'Снять выделение',
+    'confirm_install' => 'Подтвердить',
 
     // Footer
     'all_rights_reserved' => 'Все права защищены.',
