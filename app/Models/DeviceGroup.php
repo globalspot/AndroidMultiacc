@@ -88,6 +88,11 @@ class DeviceGroup extends Model
             ->table('goProfiles')
             ->where('gateUrl', $this->gate_url)
             ->where('valid', 1)
+            // Exclude devices explicitly marked as failed or deleted from created count
+            ->where(function ($q) {
+                $q->whereNull('deviceStatus')
+                  ->orWhereNotIn('deviceStatus', ['failed', 'deleted']);
+            })
             ->count();
     }
 

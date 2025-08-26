@@ -152,6 +152,7 @@ return [
     'logs' => 'Логи',
     'user_administration' => 'Управление пользователями',
     'assign_manager_to_users' => 'Назначение менеджера пользователям',
+    'app_edit' => 'Редактор приложений',
 
     // Footer
     'all_rights_reserved' => 'Все права защищены.',
@@ -507,4 +508,20 @@ return [
     'assign' => 'Назначить',
     'max_free_devices' => 'Максимум свободных устройств',
     'assigned_successfully' => 'Устройства успешно назначены',
+
+    // APK Management
+    'apk_management' => 'Управление APK',
+    'overview' => 'Обзор',
+    'no_apks_found' => 'В /public/apks не найдено APK',
+    'filename' => 'Файл',
+    'version' => 'Версия',
+    'added' => 'Добавлено',
+    'enable' => 'Включить',
+    'disable' => 'Отключить',
+    'apk_enabled' => 'APK включен',
+    'apk_disabled' => 'APK отключен',
+    'additional_lib' => 'Дополнительная библиотека',
+    'install_order' => 'Порядок установки',
+    'before' => 'До',
+    'after' => 'После',
 ];

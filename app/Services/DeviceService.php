@@ -201,6 +201,12 @@ class DeviceService
             $devices->push($deviceInfo);
         }
         
+        // Hide devices with terminal statuses from lists
+        $devices = $devices->filter(function ($device) {
+            $status = isset($device->deviceStatus) ? strtolower(trim((string) $device->deviceStatus)) : '';
+            return !in_array($status, ['failed', 'deleted'], true);
+        })->values();
+
         // For admin/manager views, the same device can be assigned to multiple users/groups.
         // Deduplicate by device ID AFTER optional filters are applied.
         if ($user->isAdmin() || $user->isManager()) {
@@ -283,9 +289,15 @@ class DeviceService
     {
         $accessibleDevices = $this->getAccessibleDevicesForUser($user);
 
+        // Exclude failed/deleted from generic totals
+        $visibleDevices = $accessibleDevices->filter(function ($device) {
+            $status = isset($device->deviceStatus) ? strtolower(trim((string) $device->deviceStatus)) : '';
+            return !in_array($status, ['failed', 'deleted'], true);
+        })->values();
+
         $stats = [
-            'total_devices' => $accessibleDevices->count(),
-            'active_devices' => $accessibleDevices->where('deviceStatus', 'online')->count(),
+            'total_devices' => $visibleDevices->count(),
+            'active_devices' => $visibleDevices->where('deviceStatus', 'online')->count(),
             'groups_count' => $user->isAdmin() ? DeviceGroup::count() : $user->managedGroups()->count(),
             'users_count' => $user->isAdmin() ? User::count() : 0,
         ];

@@ -152,6 +152,19 @@ return [
     'logs' => 'Logs',
     'user_administration' => 'User Administration',
     'assign_manager_to_users' => 'Assign Manager to Users',
+    'app_edit' => 'App Edit',
+
+    // APK Management
+    'apk_management' => 'APK Management',
+    'overview' => 'Overview',
+    'no_apks_found' => 'No APKs found in /public/apks',
+    'filename' => 'Filename',
+    'version' => 'Version',
+    'added' => 'Added',
+    'enable' => 'Enable',
+    'disable' => 'Disable',
+    'apk_enabled' => 'APK enabled',
+    'apk_disabled' => 'APK disabled',
 
     // Footer
     'all_rights_reserved' => 'All rights reserved.',
@@ -505,4 +518,9 @@ return [
     'assigned_successfully' => 'Devices assigned successfully',
     'limit' => 'Online limit',
     'created' => 'Created',
+    'additional_lib' => 'Additional library',
+    'install_order' => 'Install order',
+    'before' => 'Before',
+    'after' => 'After',
+    'update' => 'Update',
 ];

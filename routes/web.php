@@ -12,6 +12,10 @@ Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'inde
 // Role-based routes
 Route::middleware(['auth', 'verified', 'role:admin'])->group(function () {
     Route::get('/admin', [App\Http\Controllers\DashboardController::class, 'admin'])->name('admin.dashboard');
+    // Admin APK management
+    Route::get('/admin/apks', [App\Http\Controllers\AdminApkController::class, 'index'])->name('admin.apks.index');
+    Route::post('/admin/apks/enable', [App\Http\Controllers\AdminApkController::class, 'enable'])->name('admin.apks.enable');
+    Route::post('/admin/apks/disable', [App\Http\Controllers\AdminApkController::class, 'disable'])->name('admin.apks.disable');
 });
 
 Route::middleware(['auth', 'verified', 'role:manager'])->group(function () {

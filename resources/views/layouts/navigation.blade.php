@@ -82,6 +82,12 @@
                     <span class="ml-3">{{ __('app.user_administration') }}</span>
                 </a>
             </li>
+            <li>
+                <a href="{{ route('admin.apks.index') }}" class="flex items-center px-3 py-2 rounded-md {{ request()->routeIs('admin.apks.*') ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <svg class="h-5 w-5 {{ request()->routeIs('admin.apks.*') ? 'text-blue-600' : 'text-gray-400' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1M12 12v6m-3-3h6M8 8h8m-9 4h10M7 4h10a2 2 0 012 2v12"/></svg>
+                    <span class="ml-3">{{ __('app.app_edit') }}</span>
+                </a>
+            </li>
             @endif
             <li>
                 <a href="#" class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
