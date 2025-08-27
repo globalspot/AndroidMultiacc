@@ -56,6 +56,13 @@
                                                                         <input type="hidden" name="filename" value="{{ $file['filename'] }}">
                                                                         <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm">{{ __('app.disable') }}</button>
                                                                     </form>
+                                                                @elseif(empty($availableLibs[$groupName] ?? []))
+                                                                    <form method="POST" action="{{ route('admin.apks.enable') }}" class="inline">
+                                                                        @csrf
+                                                                        <input type="hidden" name="app_name" value="{{ $groupName }}">
+                                                                        <input type="hidden" name="filename" value="{{ $file['filename'] }}">
+                                                                        <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm">{{ __('app.enable') }}</button>
+                                                                    </form>
                                                                 @endif
                                                             </td>
                                                         </tr>
@@ -79,6 +86,10 @@
                                                                         <option value="before" {{ ($file['lib_install_order'] ?? '') === 'before' ? 'selected' : '' }}>{{ __('app.before') }}</option>
                                                                         <option value="after" {{ ($file['lib_install_order'] ?? '') === 'after' ? 'selected' : '' }}>{{ __('app.after') }}</option>
                                                                     </select>
+                                                                    <label class="text-sm text-gray-600 inline-flex items-center space-x-2">
+                                                                        <input type="checkbox" name="offline_required" value="1" {{ !empty($file['offline_required']) ? 'checked' : '' }}>
+                                                                        <span>{{ __('app.offline_required') }}</span>
+                                                                    </label>
                                                                     @if(!$file['enabled'])
                                                                         <button type="submit" class="inline-flex items-center px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 text-sm">{{ __('app.enable') }}</button>
                                                                     @else

@@ -64,12 +64,39 @@ class AppsController extends Controller
             'device_ids.*' => ['integer'],
             'app_title' => ['required', 'string'],
             'app_filename' => ['required', 'string'],
-            'app_url' => ['required', 'url'],
-            'lib_url' => ['nullable', 'url'],
+            'app_url' => ['required', 'string'],
+            'lib_url' => ['nullable', 'string'],
             'install_order' => ['nullable', 'in:before,after'],
             'permissions' => ['nullable', 'array'],
             'permissions.*' => ['string'],
         ]);
+
+        // Enforce offline-only constraint if configured for the selected app/filename
+        $offlineRequired = (bool) ApkEntry::where('app_name', $data['app_title'])
+            ->where('filename', $data['app_filename'])
+            ->value('offline_required');
+
+        if ($offlineRequired) {
+            $ids = array_values($data['device_ids']);
+            if (!empty($ids)) {
+                $statuses = DB::connection('mysql_second')
+                    ->table('goProfiles')
+                    ->whereIn('id', $ids)
+                    ->pluck('deviceStatus', 'id');
+                $onlineIds = collect($ids)->filter(function ($id) use ($statuses) {
+                    $s = strtolower((string)($statuses[$id] ?? ''));
+                    return $s === 'online';
+                })->values();
+                if ($onlineIds->isNotEmpty()) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'offline_required',
+                        'message' => __('app.offline_required_warning'),
+                        'online_device_ids' => $onlineIds,
+                    ], 422);
+                }
+            }
+        }
 
         $now = now();
         // Normalize permissions to JSON string for query builder insert

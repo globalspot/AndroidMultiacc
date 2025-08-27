@@ -15,6 +15,7 @@ class ApkEntry extends Model
         'lib_filename',
         'lib_url',
         'lib_install_order',
+        'offline_required',
         'add_date',
     ];
 }

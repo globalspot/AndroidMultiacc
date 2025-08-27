@@ -38,14 +38,23 @@ class AdminApkController extends Controller
 
                 sort($files, SORT_NATURAL | SORT_FLAG_CASE);
 
-                // Resolve group icon URL (prefer icon.png, then first .png)
+                // Resolve group icon URL (prefer icon.*; support png, webp, jpg, jpeg, svg)
                 $iconFile = null;
-                if (is_file($folderPath . DIRECTORY_SEPARATOR . 'icon.png')) {
-                    $iconFile = 'icon.png';
-                } else {
-                    $pngs = glob($folderPath . DIRECTORY_SEPARATOR . '*.png') ?: [];
-                    if (!empty($pngs)) {
-                        $iconFile = basename($pngs[0]);
+                $iconExts = ['png', 'webp', 'jpg', 'jpeg', 'svg'];
+                foreach ($iconExts as $ext) {
+                    $candidate = $folderPath . DIRECTORY_SEPARATOR . 'icon.' . $ext;
+                    if (is_file($candidate)) {
+                        $iconFile = 'icon.' . $ext;
+                        break;
+                    }
+                }
+                if ($iconFile === null) {
+                    foreach ($iconExts as $ext) {
+                        $matches = glob($folderPath . DIRECTORY_SEPARATOR . '*.' . $ext) ?: [];
+                        if (!empty($matches)) {
+                            $iconFile = basename($matches[0]);
+                            break;
+                        }
                     }
                 }
                 if ($iconFile !== null) {
@@ -103,6 +112,7 @@ class AdminApkController extends Controller
                         'version' => $record?->version ?? $version,
                         'lib_filename' => $selectedLib,
                         'lib_install_order' => $record?->lib_install_order,
+                        'offline_required' => (bool)($record?->offline_required),
                     ];
                 }
             }
@@ -122,6 +132,7 @@ class AdminApkController extends Controller
             'filename' => ['required', 'string'],
             'lib_filename' => ['nullable', 'string'],
             'lib_install_order' => ['nullable', 'in:before,after'],
+            'offline_required' => ['nullable', 'boolean'],
         ]);
 
         $appName = $data['app_name'];
@@ -132,15 +143,24 @@ class AdminApkController extends Controller
         $libFilename = $data['lib_filename'] ?? null;
         $libInstallOrder = $data['lib_install_order'] ?? null;
 
-        // group icon
+        // group icon (support png, webp, jpg, jpeg, svg; prefer icon.*)
         $folderPath = public_path('apks' . DIRECTORY_SEPARATOR . $appName);
         $iconUrl = null;
-        if (is_file($folderPath . DIRECTORY_SEPARATOR . 'icon.png')) {
-            $iconUrl = rtrim(config('app.url'), '/') . '/apks/' . $appName . '/icon.png';
-        } else {
-            $pngs = glob($folderPath . DIRECTORY_SEPARATOR . '*.png') ?: [];
-            if (!empty($pngs)) {
-                $iconUrl = rtrim(config('app.url'), '/') . '/apks/' . $appName . '/' . basename($pngs[0]);
+        $iconExts = ['png', 'webp', 'jpg', 'jpeg', 'svg'];
+        foreach ($iconExts as $ext) {
+            $candidate = $folderPath . DIRECTORY_SEPARATOR . 'icon.' . $ext;
+            if (is_file($candidate)) {
+                $iconUrl = rtrim(config('app.url'), '/') . '/apks/' . $appName . '/icon.' . $ext;
+                break;
+            }
+        }
+        if ($iconUrl === null) {
+            foreach ($iconExts as $ext) {
+                $matches = glob($folderPath . DIRECTORY_SEPARATOR . '*.' . $ext) ?: [];
+                if (!empty($matches)) {
+                    $iconUrl = rtrim(config('app.url'), '/') . '/apks/' . $appName . '/' . basename($matches[0]);
+                    break;
+                }
             }
         }
 
@@ -174,6 +194,7 @@ class AdminApkController extends Controller
             'lib_filename' => $libFilename,
             'lib_url' => $libUrl,
             'lib_install_order' => $libInstallOrder,
+            'offline_required' => (bool)($data['offline_required'] ?? false),
             'add_date' => Carbon::now(),
         ]);
 

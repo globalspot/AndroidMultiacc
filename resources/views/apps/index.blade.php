@@ -23,6 +23,7 @@
                                         'lib_url' => $first->lib_url ?? null,
                                         'install_order' => $first->lib_install_order ?? null,
                                         'version' => $first->version ?? null,
+                                        'offline' => ($first->offline_required ?? false) ? '1' : '0',
                                     ]);
                                     $hasVersion = $sorted->contains(function($e){ return !empty($e->version); });
                                 @endphp
@@ -41,7 +42,8 @@
                                                                 data-url="{{ $entry->url }}"
                                                                 data-lib-url="{{ $entry->lib_url }}"
                                                                 data-install-order="{{ $entry->lib_install_order }}"
-                                                                data-version="{{ $entry->version }}">
+                                                                data-version="{{ $entry->version }}"
+                                                                data-offline="{{ $entry->offline_required ? '1' : '0' }}">
                                                                 {{ $entry->version ?? $entry->filename }}
                                                             </option>
                                                         @endforeach
@@ -79,6 +81,14 @@
                                 <button class="px-3 py-1 text-sm bg-gray-100 rounded" @click="unselectAll()">{{ __('app.unselect_all') }}</button>
                             </div>
                         </div>
+                        <div class="mb-3" x-show="apiErrorMessage" x-cloak>
+                            <div class="px-3 py-2 rounded bg-red-50 text-red-800 text-sm border border-red-200" x-text="apiErrorMessage"></div>
+                        </div>
+                        <div class="mb-3" x-show="offlineOnly" x-cloak>
+                            <div class="px-3 py-2 rounded bg-yellow-50 text-yellow-800 text-sm border border-yellow-200">
+                                {{ __('app.offline_required_warning') }}
+                            </div>
+                        </div>
                         <!-- Permissions dropdown -->
                         <div class="mb-3 shrink-0">
                             <label class="block text-sm text-gray-600 mb-1">{{ __('app.required_permissions') }}</label>
@@ -92,21 +102,34 @@
                                     </div>
                                     <ul class="divide-y">
                                         <template x-for="perm in filteredPerms()" :key="perm.name">
-                                            <li class="px-3 py-2 hover:bg-gray-50 flex items-start justify-between cursor-pointer" @click="togglePermission(perm.name)">
+                                            <li class="px-3 py-2 hover:bg-gray-50 flex items-start justify-between cursor-pointer relative" @click="togglePermission(perm.name)">
                                                 <div class="flex items-start space-x-2">
                                                     <input type="checkbox" class="mt-1" :checked="selectedPermissions.includes(perm.name)" @click.stop @change="togglePermission(perm.name)">
                                                     <div>
                                                         <div class="text-sm font-medium" x-text="perm.name"></div>
                                                     </div>
                                                 </div>
-                                                <div class="ml-2 text-gray-400" title="{{ __('app.more_info') }}" @click.stop @mouseenter="hoverDesc = perm.description" @mouseleave="hoverDesc = ''">?</div>
+                                                <div class="ml-2 text-gray-400 relative" title="{{ __('app.more_info') }}" @click.stop x-data="{ showTip: false }" @mouseenter="showTip = true" @mouseleave="showTip = false">
+                                                    <span class="inline-flex items-center justify-center h-5 w-5 rounded-full bg-gray-100 text-gray-500 text-xs">?</span>
+                                                    <div x-show="showTip" x-transition x-cloak class="absolute z-20 top-6 right-0 w-64 bg-white border border-gray-200 rounded-md shadow-lg p-2 text-xs text-gray-700">
+                                                        <template x-if="perm.name">
+                                                            <div x-text="(function(){
+                                                                try {
+                                                                    const key = perm.name.replace('android.permission.', '');
+                                                                    const dict = @js(__('app.perm'));
+                                                                    if (typeof dict === 'object' && dict && dict[key]) return dict[key];
+                                                                } catch (e) {}
+                                                                return perm.description || '{{ __('app.no_data') }}';
+                                                            })()"></div>
+                                                        </template>
+                                                    </div>
+                                                </div>
                                             </li>
                                         </template>
                                         <li class="p-3 text-sm text-gray-500" x-show="filteredPerms().length === 0">{{ __('app.no_data') }}</li>
                                     </ul>
                                 </div>
                             </div>
-                            <div class="mt-1 text-xs text-gray-500" x-show="hoverDesc" x-text="hoverDesc"></div>
                         </div>
                         <div class="border rounded overflow-hidden flex-1 overflow-y-auto pb-24">
                             <table class="min-w-full divide-y divide-gray-200">
@@ -126,9 +149,15 @@
                                     <template x-for="d in filteredDevices" :key="d.id">
                                         <tr class="cursor-pointer hover:bg-gray-50" :class="selectedDeviceIds.has(d.id) ? 'bg-blue-50' : ''" @click="toggleRow(d.id)">
                                             <td class="px-4 py-2 text-sm text-gray-700" x-text="d.id"></td>
-                                            <td class="px-4 py-2 text-sm text-gray-700" x-text="d.custom_name || d.deviceName || d.name || ('#'+d.id)"></td>
+                                            <td class="px-4 py-2 text-sm text-gray-700">
+                                                <span class="inline-flex items-center space-x-2">
+                                                    <span class="inline-block h-2.5 w-2.5 rounded-full"
+                                                          :class="(d.deviceStatus || '').toLowerCase() === 'online' ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-300'"></span>
+                                                    <span x-text="d.custom_name || d.deviceName || d.name || ('#'+d.id)"></span>
+                                                </span>
+                                            </td>
                                             <td class="px-4 py-2 text-right">
-                                                <input type="checkbox" class="h-4 w-4" :value="d.id" @click.stop @change="toggleDevice(d.id, $event)" :checked="selectedDeviceIds.has(d.id)">
+                                                <input type="checkbox" class="h-4 w-4" :value="d.id" @click.stop @change="toggleDevice(d.id, $event)" :checked="selectedDeviceIds.has(d.id)" :disabled="offlineOnly && (String(d.deviceStatus||'').toLowerCase() === 'online')">
                                             </td>
                                         </tr>
                                     </template>
@@ -156,6 +185,8 @@
                 filteredDevices: [],
                 selectedDeviceIds: new Set(),
                 search: '',
+                offlineOnly: false,
+                apiErrorMessage: '',
                 // Permissions UI state
                 openPerms: false,
                 permQuery: '',
@@ -202,6 +233,16 @@
                     // Set header version label from default or existing selection
                     const verObj = this.selectedVersionByApp[appName];
                     this.currentVersionLabel = verObj ? (verObj.version || verObj.filename || '') : '';
+                    // Set offlineOnly flag based on selected version option data-offline
+                    try {
+                        const selectEl = document.querySelector('select.mt-1');
+                        if (selectEl) {
+                            const opt = selectEl.selectedOptions && selectEl.selectedOptions[0];
+                            this.offlineOnly = !!(opt && opt.dataset && String(opt.dataset.offline) === '1');
+                        } else {
+                            this.offlineOnly = !!(verObj && verObj.offline === '1');
+                        }
+                    } catch (e) { this.offlineOnly = false; }
                     if (this.devices.length === 0) {
                         fetch("{{ route('apps.devices') }}")
                             .then(r => r.json())
@@ -238,6 +279,7 @@
                         version: opt.dataset.version || null,
                     };
                     this.currentVersionLabel = (opt.dataset.version || opt.dataset.filename || '');
+                    this.offlineOnly = String(opt.dataset.offline || '0') === '1';
                 },
                 filterList(q) {
                     const query = (q || '').toLowerCase();
@@ -284,10 +326,22 @@
                             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                         },
                         body: JSON.stringify(payload)
-                    }).then(r => r.json()).then(d => {
-                        if (d.success) {
+                    }).then(async (r) => {
+                        let d = {};
+                        try { d = await r.clone().json(); } catch (e) {}
+                        if (!r.ok) {
+                            this.apiErrorMessage = (d && d.message) ? d.message : 'Request failed';
+                            if (d && Array.isArray(d.online_device_ids)) {
+                                d.online_device_ids.forEach(id => this.selectedDeviceIds.delete(id));
+                            }
+                            return;
+                        }
+                        if (d && d.success) {
+                            this.apiErrorMessage = '';
                             this.closeModal();
                         }
+                    }).catch((e) => {
+                        this.apiErrorMessage = 'Network error';
                     });
                 }
             }
