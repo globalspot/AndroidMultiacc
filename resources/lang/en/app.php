@@ -19,6 +19,7 @@ return [
     'update' => 'Update',
     'offline_required' => 'Device must be offline to install',
     'offline_required_warning' => 'This app requires the device to be offline. Online devices cannot be selected.',
+    'search_apps_placeholder' => 'Search apps... ',
     // Permission descriptions (localized)
     'perm' => [
         'ACCESS_COARSE_LOCATION' => 'Approximate device location.',

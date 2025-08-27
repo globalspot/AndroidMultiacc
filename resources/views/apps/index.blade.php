@@ -12,6 +12,9 @@
                     @if($groups->isEmpty())
                         <div class="text-gray-600">{{ __('app.no_apks_found') }}</div>
                     @else
+                        <div class="mb-4">
+                            <input type="text" class="w-full sm:w-1/2 border-gray-300 rounded-md" placeholder="{{ __('app.search_apps_placeholder') }}" x-model="appQuery">
+                        </div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                             @foreach($groups as $appName => $entries)
                                 @php
@@ -27,7 +30,7 @@
                                     ]);
                                     $hasVersion = $sorted->contains(function($e){ return !empty($e->version); });
                                 @endphp
-                                <div class="border rounded-lg p-4 hover:shadow cursor-pointer group" @click='openModal("{{ $appName }}", {!! $defaultPayload !!})'>
+                                <div class="border rounded-lg p-4 hover:shadow cursor-pointer group" x-show="appFilterMatch('{{ $appName }}')" @click='openModal("{{ $appName }}", {!! $defaultPayload !!})'>
                                     <div class="flex items-center space-x-4">
                                         <img src="{{ $first->icon_url ?? asset('favicon.ico') }}" alt="icon" class="h-12 w-12 rounded" />
                                         <div class="flex-1">
@@ -186,6 +189,7 @@
                 selectedDeviceIds: new Set(),
                 search: '',
                 offlineOnly: false,
+                appQuery: '',
                 apiErrorMessage: '',
                 // Permissions UI state
                 openPerms: false,
@@ -255,6 +259,11 @@
                     } else {
                         this.filteredDevices = this.filterList(this.search);
                     }
+                },
+                appFilterMatch(name) {
+                    const q = (this.appQuery || '').toLowerCase().trim();
+                    if (!q) return true;
+                    return String(name).toLowerCase().includes(q);
                 },
                 filteredPerms() {
                     const q = this.permQuery.toLowerCase().trim();
