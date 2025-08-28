@@ -9,6 +9,7 @@
             </h2>
             <div class="flex items-center space-x-4">
                 <x-language-switcher />
+                <x-user-menu />
             </div>
         </div>
     </x-slot>

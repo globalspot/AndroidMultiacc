@@ -13,6 +13,7 @@
                     {{ __('app.' . $role) }}
                 </span>
                 <x-language-switcher />
+                <x-user-menu />
             </div>
         </div>
     </x-slot>

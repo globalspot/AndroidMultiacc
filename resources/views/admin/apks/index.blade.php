@@ -1,6 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-white leading-tight">{{ __('app.apk_management') }}</h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-white leading-tight">{{ __('app.apk_management') }}</h2>
+            <div class="flex items-center space-x-4">
+                <x-language-switcher />
+                <x-user-menu />
+            </div>
+        </div>
     </x-slot>
 
     <div class="py-6">

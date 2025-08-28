@@ -4,7 +4,10 @@
             <h2 class="font-semibold text-xl text-white leading-tight">
                 {{ __('app.device_assignment_management') }}
             </h2>
-            <x-language-switcher />
+            <div class="flex items-center space-x-4">
+                <x-language-switcher />
+                <x-user-menu />
+            </div>
         </div>
     </x-slot>
     
