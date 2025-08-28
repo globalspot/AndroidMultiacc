@@ -51,7 +51,7 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-indigo-500 rounded-md flex items-center justify-center">
-                                <svg class="w-5 h-5 text-white" width="137px" height="137px" viewBox="0 0 1024 1024" fill="#ffffff" class="icon" version="1.1" xmlns="http://www.w3.org/2000/svg" stroke="#ffffff" stroke-width="37.888"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M962.4 1012.8s0 0.8 0 0h25.6-25.6zM704 338.4C704 195.2 588.8 78.4 445.6 78.4S187.2 195.2 187.2 338.4s116 260 258.4 260S704 481.6 704 338.4z m-472 0c0-118.4 96-214.4 213.6-214.4s213.6 96 213.6 214.4-96 214.4-213.6 214.4S232 456.8 232 338.4z" fill=""></path><path d="M456.8 621.6c196.8 0 361.6 136 394.4 324h45.6C863.2 732 677.6 576.8 456 576.8c-221.6 0-406.4 155.2-440.8 368.8h45.6C96 756.8 260 621.6 456.8 621.6z" fill=""></path><path d="M770.4 578.4l-24-8.8 20.8-14.4c65.6-46.4 104.8-122.4 103.2-202.4-1.6-128-102.4-232.8-228-241.6v47.2c100 8.8 180 92.8 180.8 194.4 0.8 52.8-19.2 102.4-56 140.8-36.8 37.6-86.4 59.2-139.2 60-24.8 0-50.4 0-75.2 1.6-15.2 1.6-41.6 0-54.4 9.6-1.6 0.8-3.2 0-4.8 0l-9.6 12c-0.8 1.6-2.4 3.2-4 4.8 0.8 1.6-0.8 16 0 17.6 12 4 71.2 0 156.8 2.4 179.2 1.6 326.4 160.8 340.8 338.4l47.2 3.2c-9.6-156-108-310.4-254.4-364.8z" fill=""></path></g></svg>
+                                <i class="las la-user-friends la-lg text-white"></i>
                             </div>
                             </div>
                             <div class="ml-4">
@@ -69,9 +69,7 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                    </svg>
+                                    <i class="las la-check-circle la-lg text-white"></i>
                                 </div>
                             </div>
                             <div class="ml-4">
@@ -89,9 +87,7 @@
                         <div class="flex items-center">
                             <div class="flex-shrink-0">
                                 <div class="w-8 h-8 bg-yellow-500 rounded-md flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                    </svg>
+                                    <i class="las la-bolt la-lg text-white"></i>
                                 </div>
                             </div>
                             <div class="ml-4">
@@ -144,9 +140,7 @@
                             @if($isAdmin)
                                 <a href="#" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"></path>
-                                        </svg>
+                                        <i class="las la-sliders-h la-lg text-red-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.system_settings') }}</p>
@@ -155,9 +149,7 @@
                                 </a>
                                 <a href="{{ route('devices.index') }}" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                        </svg>
+                                        <i class="las la-mobile-alt la-lg text-blue-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.all_devices') }}</p>
@@ -166,9 +158,7 @@
                                 </a>
                                 <a href="{{ route('user-assignments.index') }}" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                                        </svg>
+                                        <i class="las la-users-cog la-lg text-purple-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.user_group_assignments') }}</p>
@@ -177,9 +167,7 @@
                                 </a>
                                 <a href="https://multiacc.cmd.rest/scrcpy.zip" target="_blank" rel="noopener" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-teal-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4"></path>
-                                        </svg>
+                                        <i class="las la-file-download la-lg text-teal-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.download_connector') }}</p>
@@ -189,9 +177,7 @@
                             @elseif($isManager)
                                 <a href="#" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
-                                        </svg>
+                                        <i class="las la-chart-bar la-lg text-yellow-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.team_reports') }}</p>
@@ -200,9 +186,7 @@
                                 </a>
                                 <a href="{{ route('devices.index') }}" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                        </svg>
+                                        <i class="las la-mobile-alt la-lg text-green-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.devices') }}</p>
@@ -211,9 +195,7 @@
                                 </a>
                                 <a href="{{ route('device-assignments.index') }}" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
-                                        </svg>
+                                        <i class="las la-mobile-alt la-lg text-blue-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.device_assignment_management') }}</p>
@@ -245,9 +227,7 @@
                                 </a>
                                 <a href="#" class="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
                                     <div class="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center mr-3">
-                                        <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                        </svg>
+                                        <i class="las la-bolt la-lg text-purple-600"></i>
                                     </div>
                                     <div>
                                         <p class="font-medium text-gray-900">{{ __('app.automation_tasks') }}</p>

@@ -1,259 +1,76 @@
 # Project Summary: Device Management System
 
 ## Overview
-This is a Laravel-based web application for managing device assignments, user permissions, and device groups. The system appears to be designed for managing access to remote devices (likely mobile devices or emulators) through a gate system, with role-based access control and device assignment management.
+This Laravel application manages device assignments, user permissions, device groups, and now adds APK management and bulk app installation tasks. It integrates with an external MySQL database ("organic" via `mysql_second`) for device metadata, and supports role-based access control (admin, manager, user). Multi-language (en/ru) and locale auto-detection are provided.
 
 ## Technology Stack
 - **Backend**: Laravel 12 (PHP 8.2+)
-- **Frontend**: Blade templates with Tailwind CSS, Alpine.js
-- **Database**: MySQL (primary) + SQLite (local development)
-- **Build Tools**: Vite, PostCSS
+- **Frontend**: Blade, Tailwind CSS, Alpine.js
+- **Databases**: SQLite (default), MySQL (primary), MySQL `mysql_second` (external devices/tasks)
+- **Build**: Vite, PostCSS
 - **Testing**: PHPUnit
 
-## Project Structure
+## Key Modules
+- **Device Management**: Assign/unassign devices, view status and screenshots, start/stop automation, infinite scrolling, custom device names.
+- **Group Management**: Create groups; control device limits; gate URL association; user and manager membership; created-devices limit.
+- **Assignments**: Admin assigns users to groups; managers assign devices within managed groups; bulk free-device allocation.
+- **Invites**: Group invite link generation and acceptance.
+- **Localization**: Session-based locale with Accept-Language detection; language switcher UI component.
+- **APK Management (Admin)**: Scan `/public/apks` and enable/disable APKs per app group; optional additional library APKs and install order; icons.
+- **Apps Installation (All Authenticated)**: UI to select app/version and devices, pick runtime permissions, and create app install tasks against `mysql_second.app_install_tasks`. Optionally requires devices to be offline based on APK entry configuration.
 
-### Root Configuration Files
+## Routes Highlights
+- Dashboard by role: `/admin`, `/manager`, `/user`.
+- Devices: list, chunk, create, batch create, assign/unassign/cancel, search, start/stop/status, screenshots, background refresh, custom names.
+- Device limits (admin): get/update running device limit; get/update created-device limit.
+- User assignments (admin): index, assign/remove user-group links.
+- Manager assignments: device assignment CRUD; group users/devices; my/managed assignments; bulk free-device stats and allocation; group invites generate.
+- Group invites public: invite landing and accept.
+- APK admin: `/admin/apks` index, enable, disable.
+- Apps: `/apps` catalog, `/apps/devices` list accessible devices with latest custom names, `/apps/tasks` create install tasks.
+- Language: `GET /language/{locale}`.
 
-#### `composer.json`
-- **Purpose**: PHP dependency management for Laravel framework
-- **Key Dependencies**: Laravel 12, Laravel Breeze (authentication), Laravel Sail (Docker development)
-- **Scripts**: Development environment setup, testing, and queue management
+## Data Model (Primary DB)
+- `users`: with `role` and auth data.
+- `device_groups`: name, description, `device_limit`, `gate_url`, `created_device_limit` (new).
+- `device_assignments`: user-device mapping with `device_group_id`, `access_level`, `is_active`.
+- `user_group_assignments`: user-group membership and role (member/manager), `is_active`.
+- `custom_device_names`: per-user overrides of device display names.
+- `apk_entries`: enabled APK records (app_name, filename, version, urls, lib settings, icon, offline_required).
 
-#### `package.json`
-- **Purpose**: Node.js dependency management for frontend assets
-- **Key Dependencies**: Tailwind CSS, Alpine.js, Vite build tool
-- **Scripts**: Asset building and development server
+## Data Model (mysql_second)
+- `goProfiles`: external devices with status, OS, platform, screenView, gateUrl, etc.
+- `app_install_tasks`: queued install tasks (device_id, app fields, permissions JSON, status fields).
 
-#### `vite.config.js`
-- **Purpose**: Vite build tool configuration for frontend assets
-- **Functionality**: Asset compilation, hot reloading, and build optimization
+## Notable Services and Logic
+- `DeviceService`
+  - Fetch/compose accessible devices with assignments, custom names, ports, and group info.
+  - Unicode-safe device search.
+  - Start/stop device with limit enforcement.
+  - Group limits info and updates, including created-device limits.
+  - Gate URL helpers and screenshot requests.
+- `AdminApkController`: scans `/public/apks` groups, resolves icons, reads/writes `ApkEntry` records; enable/disable/update.
+- `AppsController`: serves catalog view, exposes accessible devices JSON (with latest custom names), and creates install tasks with optional offline-only enforcement.
 
-#### `tailwind.config.js`
-- **Purpose**: Tailwind CSS configuration
-- **Functionality**: Custom color schemes, component styling, and responsive design utilities
+## Views
+- Devices pages and partials: card/table rendering, controls, statistics, created-limit UI.
+- User assignments (admin/manager) and invites pages.
+- APK admin (`resources/views/admin/apks/index.blade.php`): grouped APKs, per-file enable/disable, library selection, offline flag.
+- Apps catalog (`resources/views/apps/index.blade.php`): app cards with version selector, device picker modal, permissions picker, task creation.
+- Components: `language-switcher`, `user-menu`, UI primitives, layouts.
 
-#### `postcss.config.js`
-- **Purpose**: PostCSS configuration for CSS processing
-- **Functionality**: Autoprefixer and CSS optimization
+## Security & Middleware
+- `CheckRole` middleware for role-based route protection.
+- `SetLocale` middleware for language detection and persistence.
+- CSRF on forms and API endpoints; validation on controllers/requests.
 
-#### `phpunit.xml`
-- **Purpose**: PHPUnit testing configuration
-- **Functionality**: Test suite setup, database configuration, and test environment settings
+## i18n
+- `resources/lang/en|ru/app.php`: extensive strings including APK management, apps install flow, permissions dictionary, devices, groups, assignments, invites.
 
-#### `artisan`
-- **Purpose**: Laravel command-line interface
-- **Functionality**: Artisan commands for database operations, cache management, and application maintenance
+## Testing
+- Feature tests for locale detection and profile CRUD; base example tests.
 
-#### `assign_devices.php`
-- **Purpose**: Standalone script for bulk device assignment
-- **Functionality**: 
-  - Assigns devices to users based on gate URL and date filters
-  - Connects to external 'organic' database (`mysql_second` connection)
-  - Supports batch processing with configurable parameters
-  - Creates/updates device assignments with access levels
-
-### Core Application Structure
-
-#### `app/` Directory
-Contains the main application logic following Laravel MVC pattern:
-
-##### Models (`app/Models/`)
-- **`User.php`**: User authentication and role management
-  - Role-based access control (admin, manager, user)
-  - Device assignment relationships
-  - Group management capabilities
-  
-- **`DeviceAssignment.php`**: Core device-user relationship model
-  - Links users to devices with access levels
-  - Connects to external organic database for device info
-  - Access level validation (user, manager, owner)
-  
-- **`DeviceGroup.php`**: Device grouping and organization
-  - Device limits and capacity management
-  - Gate URL association
-  - User assignment management
-  
-- **`HardwareProfile.php`**: Device hardware specifications
-- **`OsImage.php`**: Operating system image management
-- **`CustomDeviceName.php`**: User-specific device naming
-- **`GroupInvite.php`**: Group invitation system
-- **`UserGroupAssignment.php`**: User-group relationship management
-
-##### Controllers (`app/Http/Controllers/`)
-- **`DeviceController.php`**: Main device management controller
-  - Device CRUD operations
-  - Device assignment and unassignment
-  - Device group management
-  - Device automation (start/stop)
-  - Screenshot management
-  - Search and filtering
-  
-- **`DashboardController.php`**: Dashboard views and statistics
-- **`UserAssignmentController.php`**: User assignment management
-- **`GroupInviteController.php`**: Group invitation handling
-- **`ProfileController.php`**: User profile management
-- **`LanguageController.php`**: Multi-language support
-
-##### Services (`app/Services/`)
-- **`DeviceService.php`**: Business logic for device operations
-  - Device data retrieval from external database
-  - Search and filtering logic
-  - Unicode text normalization (supports Cyrillic)
-  - Device statistics and reporting
-
-##### Middleware (`app/Http/Middleware/`)
-- Authentication and authorization middleware
-- Role-based access control
-
-##### Requests (`app/Http/Requests/`)
-- Form validation and request handling
-
-#### `routes/` Directory
-- **`web.php`**: Main application routes
-  - Role-based route groups (admin, manager, user)
-  - Device management endpoints
-  - User assignment routes
-  - Group management routes
-  
-- **`auth.php`**: Authentication routes (login, register, password reset)
-- **`console.php`**: Console command routes
-
-#### `resources/` Directory
-- **`views/`**: Blade template files
-  - Dashboard views with role-based content
-  - Device management interfaces
-  - User assignment forms
-  - Authentication pages
-  
-- **`css/`**: Stylesheet files
-- **`js/`**: JavaScript files
-- **`lang/`**: Multi-language translation files
-
-#### `database/` Directory
-- **`migrations/`**: Database schema definitions
-  - User management tables
-  - Device assignment tables
-  - Group management tables
-  - Hardware and OS image tables
-  
-- **`seeders/`**: Database seeding data
-- **`factories/`**: Model factory definitions
-
-#### `config/` Directory
-- **`database.php`**: Database connection configuration
-  - Primary MySQL connection
-  - Secondary MySQL connection (`mysql_second`) for organic database
-  - SQLite for local development
-  
-- **`app.php`**: Application configuration
-- **`auth.php`**: Authentication configuration
-- **`cache.php`**: Cache configuration
-- **`session.php`**: Session management
-- **`mail.php`**: Email configuration
-- **`queue.php`**: Queue configuration
-
-#### `tests/` Directory
-- **`Feature/`**: Feature tests for application functionality
-- **`Unit/`**: Unit tests for individual components
-- **`TestCase.php`**: Base test class configuration
-
-### Public Assets (`public/`)
-- Compiled frontend assets
-- Static files and media
-- `.htaccess` for Apache configuration
-
-### Storage (`storage/`)
-- File uploads and temporary storage
-- Log files
-- Cache storage
-
-### Bootstrap (`bootstrap/`)
-- Application bootstrap files
-- Cache configuration
-
-## Key Features
-
-### 1. Device Management
-- Device assignment and unassignment
-- Device grouping and organization
-- Device status monitoring
-- Screenshot capture and management
-- Device automation (start/stop)
-
-### 2. User Management
-- Role-based access control (admin, manager, user)
-- User assignment to device groups
-- Profile management
-- Multi-language support
-
-### 3. Group Management
-- Device group creation and management
-- Device limits per group
-- Gate URL association
-- Group invitation system
-
-### 4. Access Control
-- Hierarchical access levels (user < manager < owner)
-- Device-level permissions
-- Group-level permissions
-- Role-based route protection
-
-### 5. External Integration
-- Connection to external 'organic' database
-- Device data synchronization
-- Gate system integration
-
-## Database Architecture
-
-### Primary Database (Laravel)
-- User management and authentication
-- Device assignments and relationships
-- Group management
-- Application configuration
-
-### Secondary Database (`mysql_second`)
-- External device information (`goProfiles` table)
-- Device status and metadata
-- Hardware and OS information
-
-## Security Features
-- Laravel's built-in security features
-- Role-based middleware
-- CSRF protection
-- SQL injection prevention
-- Input validation and sanitization
-
-## Development Workflow
-- Composer for PHP dependencies
-- NPM for frontend dependencies
-- Vite for asset compilation
-- PHPUnit for testing
-- Laravel Sail for Docker development environment
-
-## Deployment Considerations
-- Environment-specific configuration
-- Database connection management
-- Asset compilation for production
-- Queue worker management
-- Log rotation and monitoring
-
-## Usage Notes for LLM Agents
-
-### Key Entry Points
-1. **Device Management**: `DeviceController` handles all device-related operations
-2. **User Management**: `UserAssignmentController` manages user assignments
-3. **Authentication**: Laravel Breeze provides authentication system
-4. **Database**: Dual database setup with external device data source
-
-### Common Operations
-- Device assignment: Use `DeviceAssignment` model
-- User permissions: Check `User` model role methods
-- Device data: Access through `DeviceService` or direct `mysql_second` connection
-- Group management: Use `DeviceGroup` model and related controllers
-
-### Configuration
-- Database connections in `config/database.php`
-- Application settings in `config/app.php`
-- Frontend build in `vite.config.js` and `tailwind.config.js`
-
-This system is designed for managing remote device access with sophisticated role-based permissions and device grouping capabilities.
+## Deployment & Dev Notes
+- Configure DB connections in `config/database.php` (including `mysql_second`).
+- Ensure `/public/apks` folder structure for APK admin usage.
+- Vite/Tailwind build for assets.
