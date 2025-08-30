@@ -119,6 +119,9 @@ const MacroEditor = () => {
     const [selectedGroupId, setSelectedGroupId] = useState(null);
     const [connectionMode, setConnectionMode] = useState(false);
     const [sourceNode, setSourceNode] = useState(null);
+    const [selectedActionNode, setSelectedActionNode] = useState(null);
+    const [showActionConfigModal, setShowActionConfigModal] = useState(false);
+    const [actionFormData, setActionFormData] = useState({});
     const reactFlowWrapper = useRef(null);
     const [reactFlowInstance, setReactFlowInstance] = useState(null);
     const [paneEl, setPaneEl] = useState(null);
@@ -267,13 +270,7 @@ const MacroEditor = () => {
                         type: 'action',
                         icon: 'mobile-alt',
                         description: 'Device creation'
-                    },
-                    {
-                        label: 'Выбрать устройство',
-                        type: 'action',
-                        icon: 'mobile-alt',
-                        description: 'Select device'
-                    },
+                    },                    
                     {
                         label: 'Установка языка',
                         type: 'action',
@@ -456,6 +453,8 @@ const MacroEditor = () => {
                         data: {
                             label: actionLabel,
                             type: 'action',
+                            actionKey: actionKey,
+                            category: selectedCategory,
                             icon: actionKey ? getIconForAction(actionKey) : 'cog',
                             description: `Execute ${actionLabel?.toLowerCase?.() || ''}`,
                             variables: [],
@@ -537,6 +536,16 @@ const MacroEditor = () => {
         setSelectedNode(node);
         if (node.type === 'group') {
             setSelectedGroupId(node.id);
+        }
+        
+        // If it's an action node, open configuration modal
+        if (node.type === 'action' && node.data.actionKey) {
+            const actionData = actionTypes[node.data.category]?.actions[node.data.actionKey];
+            if (actionData && typeof actionData === 'object' && actionData.fields) {
+                setSelectedActionNode(node);
+                setActionFormData({});
+                setShowActionConfigModal(true);
+            }
         }
     };
 
@@ -671,10 +680,10 @@ const MacroEditor = () => {
     };
 
     // Make action items draggable
-    const handleActionDragStart = (event, actionKey, actionLabel) => {
+    const handleActionDragStart = (event, actionKey, actionData) => {
         event.dataTransfer.setData('application/reactflow', 'action');
         event.dataTransfer.setData('actionKey', actionKey);
-        event.dataTransfer.setData('actionLabel', actionLabel);
+        event.dataTransfer.setData('actionLabel', typeof actionData === 'object' ? actionData.label : actionData);
         event.dataTransfer.setData('isGroup', 'false');
         event.dataTransfer.effectAllowed = 'move';
     };
@@ -777,15 +786,15 @@ const MacroEditor = () => {
                                 <div>
                                     <h4 className="text-sm font-medium text-gray-900 mb-2">Individual Actions</h4>
                                     <div className="space-y-2">
-                                        {Object.entries(actionTypes[selectedCategory].actions).map(([actionKey, actionLabel]) => (
+                                        {Object.entries(actionTypes[selectedCategory].actions).map(([actionKey, actionData]) => (
                                             <div 
                                                 key={actionKey}
                                                 className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded cursor-pointer"
                                                 draggable
-                                                onDragStart={(e) => handleActionDragStart(e, actionKey, actionLabel)}
+                                                onDragStart={(e) => handleActionDragStart(e, actionKey, actionData)}
                                             >
                                                 <i className={`las la-${actionTypes[selectedCategory].icon} la-sm text-gray-600`}></i>
-                                                <span className="text-sm text-gray-700">{actionLabel}</span>
+                                                <span className="text-sm text-gray-700">{typeof actionData === 'object' ? actionData.label : actionData}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -1035,6 +1044,184 @@ const MacroEditor = () => {
                                 Add
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Action Configuration Modal */}
+            {showActionConfigModal && selectedActionNode && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium">Configure Action: {selectedActionNode.data.label}</h3>
+                            <button 
+                                onClick={() => setShowActionConfigModal(false)}
+                                className="text-gray-400 hover:text-gray-600"
+                            >
+                                <i className="las la-times la-lg"></i>
+                            </button>
+                        </div>
+                        
+                        {(() => {
+                            const actionData = actionTypes[selectedActionNode.data.category]?.actions[selectedActionNode.data.actionKey];
+                            if (!actionData || !actionData.fields) return <div>No configuration available for this action.</div>;
+                            
+                            return (
+                                <form onSubmit={(e) => {
+                                    e.preventDefault();
+                                    // Update the node with form data
+                                    const updatedNodes = nodes.map(node => {
+                                        if (node.id === selectedActionNode.id) {
+                                            return {
+                                                ...node,
+                                                data: {
+                                                    ...node.data,
+                                                    configuration: actionFormData
+                                                }
+                                            };
+                                        }
+                                        return node;
+                                    });
+                                    setNodes(updatedNodes);
+                                    setShowActionConfigModal(false);
+                                    setActionFormData({});
+                                }}>
+                                    <div className="space-y-4">
+                                        {Object.entries(actionData.fields).map(([fieldKey, fieldConfig]) => (
+                                            <div key={fieldKey} className="space-y-2">
+                                                <label className="block text-sm font-medium text-gray-700">
+                                                    {fieldConfig.label}
+                                                    {fieldConfig.required && <span className="text-red-500 ml-1">*</span>}
+                                                </label>
+                                                
+                                                {fieldConfig.type === 'text' && (
+                                                    <input
+                                                        type="text"
+                                                        placeholder={fieldConfig.placeholder || ''}
+                                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                        value={actionFormData[fieldKey] || ''}
+                                                        onChange={(e) => setActionFormData({
+                                                            ...actionFormData,
+                                                            [fieldKey]: e.target.value
+                                                        })}
+                                                        required={fieldConfig.required}
+                                                    />
+                                                )}
+                                                
+                                                {fieldConfig.type === 'textarea' && (
+                                                    <textarea
+                                                        placeholder={fieldConfig.placeholder || ''}
+                                                        rows={3}
+                                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                        value={actionFormData[fieldKey] || ''}
+                                                        onChange={(e) => setActionFormData({
+                                                            ...actionFormData,
+                                                            [fieldKey]: e.target.value
+                                                        })}
+                                                        required={fieldConfig.required}
+                                                    />
+                                                )}
+                                                
+                                                {fieldConfig.type === 'select' && (
+                                                    <select
+                                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                        value={actionFormData[fieldKey] || fieldConfig.default || ''}
+                                                        onChange={(e) => setActionFormData({
+                                                            ...actionFormData,
+                                                            [fieldKey]: e.target.value
+                                                        })}
+                                                        required={fieldConfig.required}
+                                                    >
+                                                        <option value="">Select...</option>
+                                                        {fieldConfig.options === 'dynamic' ? (
+                                                            <option value="dynamic">Dynamic Options</option>
+                                                        ) : (
+                                                            Object.entries(fieldConfig.options || {}).map(([value, label]) => (
+                                                                <option key={value} value={value}>{label}</option>
+                                                            ))
+                                                        )}
+                                                    </select>
+                                                )}
+                                                
+                                                {fieldConfig.type === 'checkbox' && (
+                                                    <div className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                                                            checked={actionFormData[fieldKey] !== undefined ? actionFormData[fieldKey] : fieldConfig.default}
+                                                            onChange={(e) => setActionFormData({
+                                                                ...actionFormData,
+                                                                [fieldKey]: e.target.value
+                                                            })}
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-700">{fieldConfig.label}</span>
+                                                    </div>
+                                                )}
+                                                
+                                                {fieldConfig.type === 'number' && (
+                                                    <input
+                                                        type="number"
+                                                        placeholder={fieldConfig.placeholder || ''}
+                                                        min={fieldConfig.min}
+                                                        max={fieldConfig.max}
+                                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                        value={actionFormData[fieldKey] || ''}
+                                                        onChange={(e) => setActionFormData({
+                                                            ...actionFormData,
+                                                            [fieldKey]: e.target.value
+                                                        })}
+                                                        required={fieldConfig.required}
+                                                    />
+                                                )}
+                                                
+                                                {fieldConfig.type === 'datetime-local' && (
+                                                    <input
+                                                        type="datetime-local"
+                                                        className="w-full border border-gray-300 rounded-md px-3 py-2"
+                                                        value={actionFormData[fieldKey] || ''}
+                                                        onChange={(e) => setActionFormData({
+                                                            ...actionFormData,
+                                                            [fieldKey]: e.target.value
+                                                        })}
+                                                        required={fieldConfig.required}
+                                                    />
+                                                )}
+                                                
+                                                {fieldConfig.type === 'json' && (
+                                                    <textarea
+                                                        placeholder={fieldConfig.placeholder || ''}
+                                                        className="w-full border border-gray-300 rounded-md px-3 py-2 font-mono text-sm"
+                                                        rows={4}
+                                                        value={actionFormData[fieldKey] || ''}
+                                                        onChange={(e) => setActionFormData({
+                                                            ...actionFormData,
+                                                            [fieldKey]: e.target.value
+                                                        })}
+                                                        required={fieldConfig.required}
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    <div className="flex justify-end space-x-2 mt-6">
+                                        <button 
+                                            type="button"
+                                            onClick={() => setShowActionConfigModal(false)}
+                                            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button 
+                                            type="submit"
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                                        >
+                                            Save Configuration
+                                        </button>
+                                    </div>
+                                </form>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
