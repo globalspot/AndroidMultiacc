@@ -40,8 +40,8 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="flex items-center px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50">
-                    <i class="las la-cogs la-lg text-gray-400"></i>
+                <a href="{{ route('automation.macros.index') }}" class="flex items-center px-3 py-2 rounded-md {{ request()->routeIs('automation.macros.*') ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50' }}">
+                    <i class="las la-cogs la-lg {{ request()->routeIs('automation.macros.*') ? 'text-blue-600' : 'text-gray-400' }}"></i>
                     <span class="ml-3">{{ __('app.automation') }}</span>
                 </a>
             </li>

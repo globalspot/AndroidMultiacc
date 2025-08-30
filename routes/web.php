@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
+
 })->name('home');
 
 Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
@@ -103,6 +104,20 @@ Route::post('/devices/{deviceId}/request-screenshot', [App\Http\Controllers\Devi
     Route::get('/apps', [App\Http\Controllers\AppsController::class, 'index'])->name('apps.index');
     Route::get('/apps/devices', [App\Http\Controllers\AppsController::class, 'devices'])->name('apps.devices');
     Route::post('/apps/tasks', [App\Http\Controllers\AppsController::class, 'createTasks'])->name('apps.tasks.create');
+    
+    // Automation Macros
+    Route::prefix('automation/macros')->name('automation.macros.')->group(function () {
+        Route::get('/', [App\Http\Controllers\AutomationMacrosController::class, 'index'])->name('index');
+        Route::get('/create', [App\Http\Controllers\AutomationMacrosController::class, 'create'])->name('create');
+        Route::post('/', [App\Http\Controllers\AutomationMacrosController::class, 'store'])->name('store');
+        Route::get('/{macro}', [App\Http\Controllers\AutomationMacrosController::class, 'show'])->name('show');
+        Route::get('/{macro}/edit', [App\Http\Controllers\AutomationMacrosController::class, 'edit'])->name('edit');
+        Route::put('/{macro}', [App\Http\Controllers\AutomationMacrosController::class, 'update'])->name('update');
+        Route::delete('/{macro}', [App\Http\Controllers\AutomationMacrosController::class, 'destroy'])->name('destroy');
+        Route::post('/{macro}/execute', [App\Http\Controllers\AutomationMacrosController::class, 'execute'])->name('execute');
+    });
+    
+    Route::get('/automation/action-types', [App\Http\Controllers\AutomationMacrosController::class, 'getActionTypes'])->name('automation.action-types');
 });
 
 // Language switching route
